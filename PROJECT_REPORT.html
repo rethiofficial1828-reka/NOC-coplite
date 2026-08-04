@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>NOC Copilot — Project Report</title>
+    <style>
+@page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+    @bottom-center {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 9px;
+        color: #6b7280;
+        font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    @top-right {
+        content: "CONFIDENTIAL — Internal Review";
+        font-size: 8px;
+        color: #9ca3af;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-style: italic;
+    }
+}
+
+@page :first {
+    @top-right { content: none; }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: #1f2937;
+    max-width: 100%;
+}
+
+h1 {
+    font-size: 22pt;
+    font-weight: 800;
+    color: #0f172a;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 8px;
+    margin-top: 30px;
+    margin-bottom: 16px;
+    page-break-after: avoid;
+}
+
+h1:first-of-type {
+    font-size: 26pt;
+    text-align: center;
+    border-bottom: 4px solid #1e40af;
+    padding-bottom: 12px;
+    margin-top: 0;
+    background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    color: white;
+    padding: 20px 16px 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+h2 {
+    font-size: 15pt;
+    font-weight: 700;
+    color: #1e40af;
+    margin-top: 24px;
+    margin-bottom: 10px;
+    border-bottom: 1.5px solid #dbeafe;
+    padding-bottom: 5px;
+    page-break-after: avoid;
+}
+
+h3 {
+    font-size: 12.5pt;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    page-break-after: avoid;
+}
+
+h4 {
+    font-size: 11pt;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 14px;
+    margin-bottom: 6px;
+}
+
+p { margin: 6px 0; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px 0;
+    font-size: 9.5pt;
+    page-break-inside: auto;
+}
+
+thead tr {
+    background: #1e3a5f;
+    color: white;
+}
+
+th {
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+}
+
+tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+tbody tr:hover {
+    background: #eff6ff;
+}
+
+code {
+    background: #f1f5f9;
+    color: #dc2626;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Fira Code', monospace;
+    font-size: 9pt;
+}
+
+pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 14px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 8.5pt;
+    line-height: 1.5;
+    margin: 10px 0 14px 0;
+    page-break-inside: avoid;
+    border-left: 4px solid #2563eb;
+}
+
+pre code {
+    background: none;
+    color: #e2e8f0;
+    padding: 0;
+    font-size: 8.5pt;
+}
+
+ul, ol {
+    margin: 6px 0 10px 20px;
+    padding-left: 10px;
+}
+
+li { margin: 3px 0; }
+
+strong { color: #0f172a; }
+
+em { color: #4b5563; }
+
+hr {
+    border: none;
+    border-top: 2px solid #e5e7eb;
+    margin: 20px 0;
+}
+
+/* Status markers */
+td:first-child { font-weight: 600; }
+
+/* Highlight FAIL/PASS/RISK markers */
+</style>
+</head>
+<body>
+<h1 id="project-report-air-gapped-predictive-noc-copilot">PROJECT REPORT — Air-Gapped Predictive NOC Copilot</h1>
+<p><strong>Report Generated</strong>: 2026-08-04<br />
+<strong>Auditor</strong>: Automated Technical Audit (Full Source Inspection)<br />
+<strong>Repository</strong>: <a href="https://github.com/rethiofficial1828-reka/NOC-coplite">github.com/rethiofficial1828-reka/NOC-coplite</a><br />
+<strong>Classification</strong>: Internal Review — Not for Marketing</p>
+<hr />
+<h2 id="1-project-overview">1. Project Overview</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project Name</strong></td>
+<td>Air-Gapped Predictive NOC Copilot</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>1.0.0</td>
+</tr>
+<tr>
+<td><strong>Purpose</strong></td>
+<td>AI-powered Network Operations Center copilot that predicts network link failures before they occur and provides RAG-grounded remediation guidance — fully air-gapped with zero cloud dependencies.</td>
+</tr>
+<tr>
+<td><strong>Language</strong></td>
+<td>Python 3.13</td>
+</tr>
+<tr>
+<td><strong>ML Framework</strong></td>
+<td>XGBoost (gradient-boosted classifier)</td>
+</tr>
+<tr>
+<td><strong>API Framework</strong></td>
+<td>FastAPI + Uvicorn</td>
+</tr>
+<tr>
+<td><strong>Dashboard</strong></td>
+<td>Streamlit</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>SQLite3 (file-based, <code>data/telemetry.db</code>)</td>
+</tr>
+<tr>
+<td><strong>LLM</strong></td>
+<td>Ollama (Phi-3) with structured template fallback</td>
+</tr>
+<tr>
+<td><strong>Knowledge Retrieval</strong></td>
+<td>TF-IDF-based pure-Python retriever (offline), optional FAISS + SentenceTransformers (neural)</td>
+</tr>
+<tr>
+<td><strong>Package Manager</strong></td>
+<td>pip (via <code>requirements.txt</code>)</td>
+</tr>
+<tr>
+<td><strong>Total Lines of Code</strong></td>
+<td>4,619 (Python: 2,379</td>
+</tr>
+</tbody>
+</table>
+<p><strong>One-Paragraph Description</strong>: The NOC Copilot is a complete ML-driven network monitoring platform designed for air-gapped/secure MPLS and SD-WAN environments. It consists of four services: (1) a <strong>Fault Simulator</strong> daemon that generates synthetic or live telemetry into a SQLite database every 2 seconds, (2) an <strong>XGBoost Predictive Engine</strong> (FastAPI on port 8000) that computes rolling-window features and predicts risk scores with time-to-SLA-breach estimation, (3) a <strong>RAG Copilot</strong> (FastAPI on port 8001) that retrieves relevant runbook chunks via TF-IDF and formulates remediation advice through an LLM (Ollama/Phi-3) or a deterministic fallback template, and (4) a <strong>Streamlit Dashboard</strong> (port 8501) providing real-time metric visualization, risk banners, and interactive simulation controls.</p>
+<hr />
+<h2 id="2-current-status-summary">2. Current Status Summary</h2>
+<p><strong>Overall Completion: ~85%</strong></p>
+<p>The core predictive loop (telemetry → features → model → risk score → copilot → dashboard) is fully functional. Testing infrastructure is comprehensive. The remaining 15% consists of missing production hardening (authentication, HTTPS, logging, graceful shutdown), incomplete CI/CD deployment, and absent database migrations.</p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Synthetic telemetry generation</td>
+<td>✅ Done</td>
+<td><code>faultsim/generate_dataset.py</code> — 5 healthy + 5 congestion scenarios, 4500 samples</td>
+</tr>
+<tr>
+<td>Live fault simulation daemon</td>
+<td>✅ Done</td>
+<td><code>faultsim/inject_fault.py</code> — healthy/congestion/mitigated modes, 2s interval</td>
+</tr>
+<tr>
+<td>Rolling-window feature extraction</td>
+<td>✅ Done</td>
+<td><code>engine/features.py</code> — 16 features: current values, 30s means, 60s slopes, deltas</td>
+</tr>
+<tr>
+<td>XGBoost risk prediction model</td>
+<td>✅ Done</td>
+<td><code>engine/model.py</code> — binary classifier + explainable formula hybrid</td>
+</tr>
+<tr>
+<td>Time-to-impact estimation</td>
+<td>✅ Done</td>
+<td>Linear extrapolation to SLA thresholds (95% util, 150ms latency)</td>
+</tr>
+<tr>
+<td>TF-IDF RAG retriever (offline)</td>
+<td>✅ Done</td>
+<td><code>copilot/rag.py</code> — pure Python, no external downloads required</td>
+</tr>
+<tr>
+<td>Neural FAISS retriever (optional)</td>
+<td>⚠️ Partial</td>
+<td>Code present but disabled by default (<code>NOC_USE_NEURAL=false</code>); requires HuggingFace model download</td>
+</tr>
+<tr>
+<td>Ollama/Phi-3 LLM integration</td>
+<td>✅ Done</td>
+<td><code>copilot/llm.py</code> — 2s connect / 6s read timeout with graceful fallback</td>
+</tr>
+<tr>
+<td>Deterministic LLM fallback</td>
+<td>✅ Done</td>
+<td><code>copilot/llm.py</code> — structured JSON response when Ollama unavailable</td>
+</tr>
+<tr>
+<td>FastAPI predictive engine API</td>
+<td>✅ Done</td>
+<td><code>engine/api.py</code> — <code>/predict</code>, <code>/health</code> endpoints</td>
+</tr>
+<tr>
+<td>FastAPI copilot API</td>
+<td>✅ Done</td>
+<td><code>copilot/api.py</code> — <code>/copilot</code>, <code>/health</code> endpoints</td>
+</tr>
+<tr>
+<td>Streamlit real-time dashboard</td>
+<td>✅ Done</td>
+<td><code>ui/app.py</code> — 418 LOC, glassmorphism UI, auto-refresh 2s</td>
+</tr>
+<tr>
+<td>Interactive topology map (HTML)</td>
+<td>✅ Done</td>
+<td><code>topology_map.html</code> — 899 LOC, Leaflet.js visualization</td>
+</tr>
+<tr>
+<td>Containerlab topology (YAML)</td>
+<td>✅ Done</td>
+<td><code>topology.clab.yml</code> — FRRouting hub + branch1 nodes</td>
+</tr>
+<tr>
+<td>College network topology docs</td>
+<td>✅ Done</td>
+<td><code>copilot/docs/college_topology.txt</code> — 3 zones mapped</td>
+</tr>
+<tr>
+<td>Unit tests</td>
+<td>✅ Done</td>
+<td>9 unit tests in <code>test_master.py</code></td>
+</tr>
+<tr>
+<td>Integration tests</td>
+<td>✅ Done</td>
+<td>7 API contract tests</td>
+</tr>
+<tr>
+<td>E2E scenario tests</td>
+<td>✅ Done</td>
+<td>4 lifecycle tests (healthy → congestion → copilot → recovery)</td>
+</tr>
+<tr>
+<td>Edge case tests</td>
+<td>✅ Done</td>
+<td>8 boundary condition tests</td>
+</tr>
+<tr>
+<td>Stress tests</td>
+<td>✅ Done</td>
+<td>3 load tests (rapid-fire APIs + DB consistency)</td>
+</tr>
+<tr>
+<td>CI/CD pipeline (GitHub Actions)</td>
+<td>⚠️ Partial</td>
+<td>YAML exists locally but NOT pushed to GitHub (token lacked <code>workflow</code> scope)</td>
+</tr>
+<tr>
+<td>API authentication</td>
+<td>❌ Pending</td>
+<td>No auth on any endpoint</td>
+</tr>
+<tr>
+<td>HTTPS/TLS</td>
+<td>❌ Pending</td>
+<td>All services use plain HTTP</td>
+</tr>
+<tr>
+<td>Rate limiting</td>
+<td>❌ Pending</td>
+<td>No rate limiting on any API</td>
+</tr>
+<tr>
+<td>Structured logging</td>
+<td>❌ Pending</td>
+<td>Uses <code>print()</code> statements throughout</td>
+</tr>
+<tr>
+<td>Database migrations</td>
+<td>❌ Pending</td>
+<td>Schema created inline in <code>inject_fault.py</code></td>
+</tr>
+<tr>
+<td>Graceful shutdown / signal handling</td>
+<td>⚠️ Partial</td>
+<td><code>run.sh</code> has <code>trap cleanup</code>, but daemon loop lacks signal handling</td>
+</tr>
+<tr>
+<td>Input validation</td>
+<td>⚠️ Partial</td>
+<td>Pydantic models validate types but not value ranges</td>
+</tr>
+<tr>
+<td>Production deployment config</td>
+<td>❌ Pending</td>
+<td>No Dockerfile, no systemd units, no WSGI/Gunicorn config</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-pending-incomplete-work">3. Pending / Incomplete Work</h2>
+<h3 id="31-todo-fixme-hack-comments-in-code">3.1 TODO / FIXME / HACK Comments in Code</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line</th>
+<th>Type</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—</td>
+<td>—</td>
+<td>—</td>
+<td><strong>No TODO/FIXME/HACK comments found in the entire codebase.</strong></td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-unfinished-features">3.2 Unfinished Features</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Description</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No API authentication</strong></td>
+<td>All 4 endpoints (<code>/predict</code>, <code>/copilot</code>, <code>/health</code> ×2) accept unauthenticated requests. Any device on the network can trigger predictions or modify simulation state.</td>
+<td>Critical</td>
+</tr>
+<tr>
+<td><strong>No HTTPS enforcement</strong></td>
+<td>All HTTP traffic is plaintext on ports 8000, 8001, 8501.</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>No rate limiting</strong></td>
+<td>APIs can be hammered without restriction.</td>
+<td>High</td>
+</tr>
+<tr>
+<td><strong>No structured logging</strong></td>
+<td>All diagnostic output uses <code>print()</code> — no log levels, rotation, or centralized collection.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>No database migration system</strong></td>
+<td>Schema is created via inline <code>CREATE TABLE IF NOT EXISTS</code> in <code>faultsim/inject_fault.py</code> (lines 16–36). No versioning, no migration tool.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>No production WSGI server</strong></td>
+<td>Uvicorn is used directly with default single-worker config. No Gunicorn/multi-worker setup.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>No Dockerfile / container packaging</strong></td>
+<td>Despite having a Containerlab topology, the application itself has no Dockerfile.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>No graceful daemon shutdown</strong></td>
+<td><code>faultsim/inject_fault.py</code> <code>main_loop()</code> (line 84) runs <code>while True</code> without signal handling. <code>Ctrl+C</code> will leave orphaned DB connections.</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>CI/CD workflow not deployed</strong></td>
+<td><code>.github/workflows/test.yml</code> exists locally but is NOT on GitHub (token permission issue).</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>Neural retriever disabled</strong></td>
+<td>FAISS + SentenceTransformers code exists in <code>copilot/rag.py</code> but is gated behind <code>NOC_USE_NEURAL=true</code> env var. Not tested in CI.</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-missing-error-handling">3.3 Missing Error Handling</h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Line(s)</th>
+<th>Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>engine/api.py</code></td>
+<td>36–42</td>
+<td><code>sqlite3.connect()</code> not using context manager; if <code>pd.read_sql_query</code> raises, <code>conn.close()</code> is skipped → connection leak</td>
+</tr>
+<tr>
+<td><code>engine/api.py</code></td>
+<td>85–86</td>
+<td>Generic <code>except Exception as e</code> exposes raw error strings via HTTP 500 response</td>
+</tr>
+<tr>
+<td><code>engine/features.py</code></td>
+<td>15–59</td>
+<td>No validation that required DataFrame columns exist; <code>KeyError</code> if columns are missing</td>
+</tr>
+<tr>
+<td><code>engine/features.py</code></td>
+<td>12</td>
+<td><code>np.polyfit</code> can throw <code>LinAlgError</code> on NaN/Inf input; not caught</td>
+</tr>
+<tr>
+<td><code>engine/model.py</code></td>
+<td>72, 117</td>
+<td>XGBoost load/predict failures are caught but only <code>print()</code>-ed, not logged or metricked</td>
+</tr>
+<tr>
+<td><code>copilot/api.py</code></td>
+<td>10–14</td>
+<td>RAG initialization failure silently sets <code>rag = None</code>; no retry or monitoring alert</td>
+</tr>
+<tr>
+<td><code>copilot/api.py</code></td>
+<td>51</td>
+<td>Exception message includes <code>str(e)</code> in HTTP response — information disclosure</td>
+</tr>
+<tr>
+<td><code>copilot/rag.py</code></td>
+<td>131–154</td>
+<td><code>read_raw_documents()</code> doesn't handle <code>FileNotFoundError</code> or <code>PermissionError</code></td>
+</tr>
+<tr>
+<td><code>copilot/llm.py</code></td>
+<td>100</td>
+<td><code>json.loads(response_text)</code> JSONDecodeError is caught by generic <code>except</code> without logging malformed output</td>
+</tr>
+<tr>
+<td><code>faultsim/inject_fault.py</code></td>
+<td>84–169</td>
+<td>Infinite loop with generic <code>except Exception</code> on entire iteration; no signal-based shutdown</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-missing-tests">3.4 Missing Tests</h3>
+<table>
+<thead>
+<tr>
+<th>Gap</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No <code>pytest</code> test runner</td>
+<td>All tests use <code>unittest</code> or custom procedural scripts; <code>pytest</code> is listed in <code>requirements.txt</code> but never used</td>
+</tr>
+<tr>
+<td>No code coverage</td>
+<td>No <code>coverage</code> or <code>pytest-cov</code> configuration</td>
+</tr>
+<tr>
+<td>No mutation testing</td>
+<td>Not applicable at current maturity</td>
+</tr>
+<tr>
+<td>No load testing at scale</td>
+<td>Stress tests are limited to 20 API calls and 100 DB rows</td>
+</tr>
+<tr>
+<td>Neural RAG path untested</td>
+<td>FAISS + SentenceTransformers path has zero test coverage</td>
+</tr>
+<tr>
+<td>No negative security tests</td>
+<td>No test for prompt injection, SQL injection via <code>interface</code> parameter, or XSS</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-project-workflow">4. Project Workflow</h2>
+<h3 id="41-application-flow">4.1 Application Flow</h3>
+<p><strong>Step-by-step data flow:</strong></p>
+<ol>
+<li>
+<p><strong>Telemetry Generation</strong>: The <code>faultsim/inject_fault.py</code> daemon runs every 2 seconds, generating synthetic network metrics (utilization, latency, jitter, drops, routing_flaps) based on the current simulation mode (healthy/congestion/mitigated) and inserting them into <code>data/telemetry.db</code> (SQLite).</p>
+</li>
+<li>
+<p><strong>Feature Extraction</strong>: When a prediction is requested via <code>GET /predict?interface=Branch3-Uplink</code>, the engine API (<code>engine/api.py</code>) queries the last 30 telemetry samples from SQLite, passes them to <code>engine/features.py</code> which computes 16 rolling-window features (current values, 30s means, 60s slopes, baseline deltas).</p>
+</li>
+<li>
+<p><strong>Risk Prediction</strong>: The feature vector is fed to <code>engine/model.py</code>'s <code>RiskPredictor</code> which combines an XGBoost binary classifier (trained on synthetic data) with an explainable formula. The output includes a 0.0–1.0 risk score, time-to-SLA-breach (minutes), and human-readable contributing signals.</p>
+</li>
+<li>
+<p><strong>RAG Retrieval</strong>: When risk exceeds 0.3, the Streamlit dashboard auto-triggers <code>POST /copilot</code> on the copilot API. The copilot builds a query from the alert data and retrieves top-3 relevant chunks from runbook/topology documents via TF-IDF cosine similarity (<code>copilot/rag.py</code>).</p>
+</li>
+<li>
+<p><strong>LLM Reasoning</strong>: The retrieved chunks plus alert data are formatted into a structured prompt and sent to Ollama (Phi-3 model). If Ollama is unreachable (2s connect timeout), a deterministic fallback template generates the response (<code>copilot/llm.py</code>).</p>
+</li>
+<li>
+<p><strong>Dashboard Rendering</strong>: The Streamlit UI (<code>ui/app.py</code>) polls the engine API every 2 seconds, renders live metric charts (utilization, latency, jitter, drops), displays a color-coded risk banner (green/amber/red), and shows the AI copilot's structured recommendations with cited runbook sources.</p>
+</li>
+</ol>
+<h3 id="42-architecture-diagram">4.2 Architecture Diagram</h3>
+<p><em>[Mermaid diagram — view in GitHub for interactive rendering]</em></p>
+
+<h3 id="43-critical-feature-rag-grounded-copilot-flow">4.3 Critical Feature: RAG-Grounded Copilot Flow</h3>
+<p><em>[Mermaid diagram — view in GitHub for interactive rendering]</em></p>
+
+<hr />
+<h2 id="5-folder-file-structure">5. Folder / File Structure</h2>
+<pre><code>noc-copilot/                          # Project root
+├── .github/
+│   └── workflows/
+│       └── test.yml                  # GitHub Actions CI/CD pipeline (NOT pushed to remote)
+├── .gitignore                        # Git ignore patterns (37 lines)
+├── .streamlit/
+│   └── config.toml                   # Streamlit config: headless=true, no usage stats
+├── README.md                         # Professional README with architecture, setup, API docs
+├── PROJECT_REPORT.md                 # This report
+├── requirements.txt                  # Python dependencies (10 packages)
+├── run.sh                            # One-command launcher for all 4 services
+├── topology.clab.yml                 # Containerlab topology (hub + branch1, FRRouting)
+├── topology_map.html                 # Interactive Leaflet.js network topology visualization
+├── test_config.yml                   # YAML-defined test scenarios, thresholds, topology (585 lines)
+├── test_all.py                       # Quick unit test suite (5 tests, unittest)
+├── test_e2e.py                       # End-to-end lifecycle test (5 stages, procedural)
+├── test_master.py                    # Master test runner — 31 tests across 5 categories
+│
+├── engine/                           # Predictive ML Engine
+│   ├── api.py                        # FastAPI server (port 8000): /predict, /health
+│   ├── features.py                   # Rolling-window feature extraction (16 features)
+│   └── model.py                      # XGBoost RiskPredictor class + training script
+│
+├── copilot/                          # RAG + LLM Copilot
+│   ├── api.py                        # FastAPI server (port 8001): /copilot, /health
+│   ├── rag.py                        # TFIDFRetriever + LocalRAG with optional FAISS neural path
+│   ├── llm.py                        # Ollama/Phi-3 query engine + deterministic fallback
+│   └── docs/                         # RAG knowledge base (read-only runbooks)
+│       ├── runbook_congestion.txt    # Congestion response procedure
+│       ├── past_incidents.txt        # Historical incident logs (INC-492, INC-511)
+│       ├── network_topology.txt      # MPLS/SD-WAN topology (Branch3 ↔ DC1)
+│       └── college_topology.txt      # College network zones, QoS policy, traffic rules
+│
+├── faultsim/                         # Fault Simulation
+│   ├── generate_dataset.py           # Synthetic training data generator (10 scenarios)
+│   └── inject_fault.py               # Live fault injection daemon (2s interval)
+│
+├── ui/                               # Dashboard
+│   └── app.py                        # Streamlit UI (premium glassmorphism design)
+│
+└── data/                             # Runtime data (partially gitignored)
+    ├── synthetic_telemetry.csv       # Pre-generated training data (4500 rows, 353KB)
+    ├── xgboost_model.json            # Trained XGBoost model artifact (81KB)
+    ├── chunks.txt                    # Pre-parsed RAG document chunks (2KB)
+    └── telemetry.db                  # Live SQLite database (runtime-generated, 52KB)
+</code></pre>
+<hr />
+<h2 id="6-dependencies">6. Dependencies</h2>
+<h3 id="61-direct-dependencies-requirementstxt">6.1 Direct Dependencies (<code>requirements.txt</code>)</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version Constraint</th>
+<th>Purpose</th>
+<th>Pinned?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pandas</td>
+<td>≥ 2.0.0</td>
+<td>DataFrames for telemetry feature extraction</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>numpy</td>
+<td>≥ 1.24.0</td>
+<td>Numerical computation, slope/mean/clip</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>scikit-learn</td>
+<td>≥ 1.3.0</td>
+<td>Listed but <strong>not directly imported</strong> in any source file</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>xgboost</td>
+<td>≥ 2.0.0</td>
+<td>ML risk prediction classifier</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>fastapi</td>
+<td>≥ 0.100.0</td>
+<td>API framework for engine + copilot servers</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>uvicorn</td>
+<td>≥ 0.23.0</td>
+<td>ASGI server for FastAPI</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>requests</td>
+<td>≥ 2.31.0</td>
+<td>HTTP client for Ollama, inter-service calls, dashboard API queries</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>streamlit</td>
+<td>≥ 1.28.0</td>
+<td>Interactive real-time dashboard</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>pytest</td>
+<td>≥ 7.4.0</td>
+<td>Test framework (listed but <strong>not used</strong> — tests use <code>unittest</code> / custom scripts)</td>
+<td>❌ Minimum only</td>
+</tr>
+<tr>
+<td>pytest-timeout</td>
+<td>≥ 2.2.0</td>
+<td>Pytest timeout plugin (listed but <strong>not used</strong>)</td>
+<td>❌ Minimum only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="62-optional-conditional-dependencies-in-code-but-not-in-requirementstxt">6.2 Optional / Conditional Dependencies (in code but not in requirements.txt)</h3>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Used In</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>sentence-transformers</td>
+<td><code>copilot/rag.py</code> line 113</td>
+<td>Only when <code>NOC_USE_NEURAL=true</code></td>
+</tr>
+<tr>
+<td>faiss-cpu</td>
+<td><code>copilot/rag.py</code> line 114</td>
+<td>Only when <code>NOC_USE_NEURAL=true</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="63-dependency-audit">6.3 Dependency Audit</h3>
+<p><strong><code>pip-audit</code> / <code>npm audit</code></strong>: Not found / Unable to verify. No audit tooling is configured in the project or CI pipeline.</p>
+<p><strong>Known concerns:</strong><br />
+- All dependencies use <strong>minimum-bound constraints</strong> (<code>&gt;=</code>), which can pull in untested or breaking updates. <strong>Recommendation</strong>: Pin exact versions with <code>pip freeze &gt; requirements.lock</code> for reproducible builds.<br />
+- <code>scikit-learn</code> is listed as a dependency but <strong>never imported</strong> anywhere in the source code. It adds ~200MB of unnecessary installation weight.<br />
+- <code>pytest</code> and <code>pytest-timeout</code> are listed but <strong>never used</strong> — all tests run via <code>unittest.main()</code> or custom procedural scripts.</p>
+<hr />
+<h2 id="7-environment-setup-how-to-run-end-to-end">7. Environment Setup &amp; How to Run (End-to-End)</h2>
+<h3 id="71-prerequisites">7.1 Prerequisites</h3>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Version</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.13+</td>
+<td>Verified: Python 3.13.12 on target system</td>
+</tr>
+<tr>
+<td>pip</td>
+<td>Latest</td>
+<td>Package installer</td>
+</tr>
+<tr>
+<td>SQLite3</td>
+<td>Bundled with Python</td>
+<td>No separate installation needed</td>
+</tr>
+<tr>
+<td>Ollama</td>
+<td>Latest (optional)</td>
+<td>For live LLM inference; system works without it via fallback</td>
+</tr>
+<tr>
+<td>git</td>
+<td>2.x+</td>
+<td>For cloning</td>
+</tr>
+</tbody>
+</table>
+<h3 id="72-step-by-step-setup">7.2 Step-by-Step Setup</h3>
+<pre><code class="language-bash"># 1. Clone the repository
+git clone https://github.com/rethiofficial1828-reka/NOC-coplite.git
+cd NOC-coplite
+
+# 2. Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Generate synthetic training dataset (if not present)
+cd ..  # Move to parent of noc-copilot
+PYTHONPATH=$(pwd) python3 -m noc-copilot.faultsim.generate_dataset
+
+# 5. Train the XGBoost model (if not present)
+PYTHONPATH=$(pwd) python3 -m noc-copilot.engine.model train
+
+# 6. Build the RAG chunk index
+PYTHONPATH=$(pwd) python3 -m noc-copilot.copilot.rag
+
+# 7. Launch all services (one command)
+cd noc-copilot
+./run.sh
+</code></pre>
+<h3 id="73-environment-variables">7.3 Environment Variables</h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PYTHONPATH</code></td>
+<td>Yes</td>
+<td>Must include project parent directory (set by <code>run.sh</code>)</td>
+</tr>
+<tr>
+<td><code>NOC_USE_NEURAL</code></td>
+<td>No</td>
+<td>Set to <code>"true"</code> to enable FAISS + SentenceTransformers neural retriever (default: <code>false</code>)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note</strong>: No <code>.env</code> file exists or is required. No API keys are needed for the default offline configuration.</p>
+<h3 id="74-how-to-run-tests">7.4 How to Run Tests</h3>
+<pre><code class="language-bash"># From project parent directory, with venv activated:
+cd /path/to/parent-of-noc-copilot
+
+# Quick unit tests only (no running services required):
+PYTHONPATH=$(pwd) python3 -m unittest noc-copilot.test_all
+
+# Full 31-test master suite (requires services running via run.sh):
+PYTHONPATH=$(pwd) python3 noc-copilot/test_master.py
+
+# E2E lifecycle test (requires services running):
+PYTHONPATH=$(pwd) python3 noc-copilot/test_e2e.py
+</code></pre>
+<h3 id="75-default-ports-urls">7.5 Default Ports &amp; URLs</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>URL</th>
+<th>Auth Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Predictive Engine API</td>
+<td>8000</td>
+<td><code>http://localhost:8000/predict</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Copilot RAG &amp; LLM API</td>
+<td>8001</td>
+<td><code>http://localhost:8001/copilot</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Streamlit Dashboard</td>
+<td>8501</td>
+<td><code>http://localhost:8501</code></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Ollama (optional)</td>
+<td>11434</td>
+<td><code>http://localhost:11434/api/generate</code></td>
+<td>None</td>
+</tr>
+</tbody>
+</table>
+<h3 id="76-build-command-production">7.6 Build Command (Production)</h3>
+<p><strong>Not found / Unable to verify.</strong> No production build configuration exists. No Dockerfile, no <code>Procfile</code>, no systemd unit files.</p>
+<hr />
+<h2 id="8-security-review">8. Security Review</h2>
+<h3 id="81-authentication-session-handling">8.1 Authentication &amp; Session Handling</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API authentication</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>No authentication mechanism on any endpoint. <code>engine/api.py</code>, <code>copilot/api.py</code> — zero auth middleware.</td>
+</tr>
+<tr>
+<td>Session management</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>No session tokens, no cookies, no JWT.</td>
+</tr>
+<tr>
+<td>Password hashing</td>
+<td>N/A</td>
+<td>No user accounts exist.</td>
+</tr>
+<tr>
+<td>Brute-force protection</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>No rate limiting, no lockout mechanism.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="82-input-validation-sanitization">8.2 Input Validation &amp; Sanitization</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pydantic model validation</td>
+<td>⚠️ <strong>PARTIAL</strong></td>
+<td><code>copilot/api.py</code> lines 16–20: <code>CopilotRequest</code> validates types (str, float, List[str]) but does NOT enforce value ranges. <code>risk_score</code> accepts NaN, Infinity, or negative values.</td>
+</tr>
+<tr>
+<td>Query parameter validation</td>
+<td>⚠️ <strong>PARTIAL</strong></td>
+<td><code>engine/api.py</code> line 15: <code>interface</code> parameter is a free-form string with a default value but no whitelist or regex validation.</td>
+</tr>
+<tr>
+<td>HTML sanitization</td>
+<td>⚠️ <strong>PARTIAL</strong></td>
+<td><code>ui/app.py</code> uses <code>unsafe_allow_html=True</code> at 21+ locations. Most HTML is built from numeric metrics (safe), but <code>doc['chunk']</code> (line 378) and <code>src</code> (line 375) from RAG responses are injected into HTML without escaping.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="83-sql-injection-risk">8.3 SQL Injection Risk</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Parameterized queries</td>
+<td>✅ <strong>PASS</strong></td>
+<td>All SQL queries use parameterized bindings (<code>?</code>). Verified in: <code>engine/api.py</code> line 41, <code>faultsim/inject_fault.py</code> lines 37–54, <code>ui/app.py</code> lines 145–157.</td>
+</tr>
+<tr>
+<td>Raw query construction</td>
+<td>✅ <strong>PASS</strong></td>
+<td>No string concatenation or f-string SQL construction found anywhere.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="84-xss-risk-areas">8.4 XSS Risk Areas</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unsafe_allow_html=True</code></td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>ui/app.py</code> line 375: <code>st.markdown(f'&lt;span class="source-tag"&gt;📄 {src}&lt;/span&gt;', unsafe_allow_html=True)</code> — <code>src</code> comes from RAG document source filenames. If a malicious filename existed in <code>copilot/docs/</code>, it could inject HTML/JS.</td>
+</tr>
+<tr>
+<td><code>unsafe_allow_html=True</code></td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>ui/app.py</code> line 378: RAG chunk content (<code>doc['chunk']</code>) is directly embedded in HTML. If runbook content contained <code>&lt;script&gt;</code> tags, they would be rendered.</td>
+</tr>
+<tr>
+<td>Metric values in HTML</td>
+<td>✅ <strong>PASS</strong></td>
+<td>Numeric metrics are formatted with <code>:.1f</code> / <code>:.0f</code> — safe against injection.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="85-csrf-protection">8.5 CSRF Protection</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSRF tokens</td>
+<td>N/A</td>
+<td>No forms or state-changing browser submissions. API uses JSON POST, not HTML forms. Streamlit handles its own CSRF internally.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="86-authorization-access-control">8.6 Authorization &amp; Access Control</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Endpoint authorization</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>All 4 endpoints are publicly accessible to any client on the network. No role-based access, no API keys.</td>
+</tr>
+<tr>
+<td>Simulation control</td>
+<td>❌ <strong>FAIL</strong></td>
+<td><code>ui/app.py</code> lines 141–147: <code>set_sim_mode()</code> directly writes to SQLite via button clicks — no authorization check. Anyone with dashboard access can inject congestion or reset metrics.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="87-secrets-management">8.7 Secrets Management</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hardcoded API keys</td>
+<td>✅ <strong>PASS</strong></td>
+<td>No API keys, tokens, or passwords found in source code.</td>
+</tr>
+<tr>
+<td><code>.env</code> files</td>
+<td>✅ <strong>PASS</strong></td>
+<td>No <code>.env</code> files exist in the project.</td>
+</tr>
+<tr>
+<td>Git-exposed secrets</td>
+<td>✅ <strong>PASS</strong></td>
+<td><code>.gitignore</code> excludes <code>data/telemetry.db</code>, CSV data, model JSON, and virtual environment.</td>
+</tr>
+<tr>
+<td>Internal IPs in code</td>
+<td>⚠️ <strong>INFO</strong></td>
+<td><code>copilot/llm.py</code> line 27: hardcoded BGP next-hop <code>192.168.30.2</code>. <code>copilot/docs/college_topology.txt</code>: internal IPs <code>10.50.0.1</code>, <code>10.50.0.231</code>, <code>192.168.56.1</code>. These are lab/documentation IPs, not credentials, but reveal internal topology if published.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="88-httpstls-enforcement">8.8 HTTPS/TLS Enforcement</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TLS configured</td>
+<td>❌ <strong>FAIL</strong></td>
+<td><code>run.sh</code> lines 51, 56: Uvicorn binds on <code>0.0.0.0</code> with <code>--port</code> only — no <code>--ssl-keyfile</code> or <code>--ssl-certfile</code>.</td>
+</tr>
+<tr>
+<td>Streamlit HTTPS</td>
+<td>❌ <strong>FAIL</strong></td>
+<td><code>.streamlit/config.toml</code> has no TLS configuration.</td>
+</tr>
+<tr>
+<td>Inter-service HTTPS</td>
+<td>❌ <strong>FAIL</strong></td>
+<td><code>ui/app.py</code> uses <code>http://localhost:8000</code> and <code>http://localhost:8001</code> — plaintext HTTP.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="89-security-headers">8.9 Security Headers</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSP (Content-Security-Policy)</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>Not configured. FastAPI defaults have no security headers.</td>
+</tr>
+<tr>
+<td>X-Frame-Options</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>Not configured.</td>
+</tr>
+<tr>
+<td>HSTS</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>Not configured (no HTTPS exists to enforce).</td>
+</tr>
+<tr>
+<td>X-Content-Type-Options</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>Not configured.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="810-payment-handling">8.10 Payment Handling</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Payment processing</td>
+<td>N/A</td>
+<td>No payment functionality exists in this project.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="811-dependency-vulnerabilities">8.11 Dependency Vulnerabilities</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pip-audit</code> scan</td>
+<td>Not found / Unable to verify</td>
+<td>No audit tooling in project or CI. No CVE scan has been run.</td>
+</tr>
+<tr>
+<td>Loose version constraints</td>
+<td>⚠️ <strong>RISK</strong></td>
+<td>All 10 dependencies use <code>&gt;=</code> minimum bounds. Future <code>pip install</code> may pull in untested or vulnerable versions.</td>
+</tr>
+<tr>
+<td>Unused dependencies</td>
+<td>⚠️ <strong>WASTE</strong></td>
+<td><code>scikit-learn</code> (not imported), <code>pytest</code> (not used), <code>pytest-timeout</code> (not used) — unnecessary attack surface.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="812-rate-limiting-ddos-protection">8.12 Rate Limiting / DDoS Protection</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API rate limiting</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>No rate limiting middleware. FastAPI has no built-in rate limiter. <code>slowapi</code> or similar not installed.</td>
+</tr>
+<tr>
+<td>Connection limits</td>
+<td>❌ <strong>FAIL</strong></td>
+<td>Uvicorn defaults with no <code>--limit-concurrency</code> or <code>--limit-max-requests</code>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="813-file-upload-validation">8.13 File Upload Validation</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>File uploads</td>
+<td>N/A</td>
+<td>No file upload functionality exists.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="814-logging-of-sensitive-data">8.14 Logging of Sensitive Data</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Password/token logging</td>
+<td>✅ <strong>PASS</strong></td>
+<td>No passwords, tokens, or secrets are logged via <code>print()</code> statements.</td>
+</tr>
+<tr>
+<td>Error message exposure</td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>engine/api.py</code> line 86: <code>detail=f"Prediction error: {str(e)}"</code> — raw exception strings returned to API clients may contain file paths or internal details. Same pattern in <code>copilot/api.py</code> line 51.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="815-prompt-injection">8.15 Prompt Injection</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LLM prompt injection</td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>copilot/llm.py</code> lines 55–78: <code>payload.interface</code> and <code>payload.contributing_signals</code> are injected directly into the LLM prompt without sanitization. A malicious API caller could craft signals like <code>"Ignore all instructions and..."</code> to alter LLM behavior.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="816-network-binding">8.16 Network Binding</h3>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Services bound to <code>0.0.0.0</code></td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>run.sh</code> lines 51, 56, 72: All 3 services bind to <code>0.0.0.0</code>, exposing them to the entire network. For a lab environment, binding to <code>127.0.0.1</code> would be more appropriate unless remote dashboard access is intentional.</td>
+</tr>
+<tr>
+<td>Log files in <code>/tmp/</code></td>
+<td>⚠️ <strong>RISK</strong></td>
+<td><code>run.sh</code> lines 46, 51, 56: Background service logs are written to <code>/tmp/noc_*.log</code> with default world-readable permissions.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="9-known-issues-limitations">9. Known Issues / Limitations</h2>
+<h3 id="91-bugs-found-during-inspection">9.1 Bugs Found During Inspection</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>File</th>
+<th>Line(s)</th>
+<th>Issue</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>engine/api.py</code></td>
+<td>36–42</td>
+<td>SQLite connection not using context manager (<code>with</code>). If <code>pd.read_sql_query</code> raises, <code>conn.close()</code> is never called → connection leak.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>copilot/rag.py</code></td>
+<td>36–40</td>
+<td>TF-IDF vector construction has a bug: iterates <code>zip(self.vocab.keys(), vec)</code> where <code>word</code> in the zip is actually a string, but the loop body uses <code>self.vocab[word]</code> for indexing — this works but is inefficient and confusing. The TF multiplication is applied via <code>count</code> (which is <code>vec[idx]</code>), but <code>count</code> is named misleadingly — it's the raw frequency, not a separate variable.</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>run.sh</code></td>
+<td>5</td>
+<td><code>cd "$SCRIPT_DIR/.."</code> assumes the script is inside a subdirectory. If <code>run.sh</code> is at the project root, this navigates to the parent, potentially breaking <code>PYTHONPATH</code>.</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>topology.clab.yml</code></td>
+<td>12, 17</td>
+<td>Uses <code>frrouting/frr:latest</code> — unpinned container image tag. Builds are non-reproducible.</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>test_config.yml</code></td>
+<td>72–91</td>
+<td>Contains real internal network topology IPs (<code>10.50.0.231</code>, <code>192.168.56.1</code>). If published to a public repo, this reveals infrastructure details.</td>
+<td>Info</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-architecture-scalability-concerns">9.2 Architecture / Scalability Concerns</h3>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Single-threaded SQLite</strong></td>
+<td>SQLite does not support concurrent write access. Under heavy load (multiple simulation daemons or API workers), writes will serialize or fail with <code>database is locked</code>. Not suitable for multi-worker production deployment.</td>
+</tr>
+<tr>
+<td><strong>Single XGBoost model for all interfaces</strong></td>
+<td>The model is trained only on <code>Branch3-Uplink</code> synthetic data. Predictions for other interfaces use the same model, which may not generalize.</td>
+</tr>
+<tr>
+<td><strong>2-second dashboard polling loop</strong></td>
+<td><code>ui/app.py</code> line 416–417 uses <code>time.sleep(2); st.rerun()</code> — this creates continuous re-renders regardless of whether data changed. Resource-intensive on slow hardware.</td>
+</tr>
+<tr>
+<td><strong>No model versioning</strong></td>
+<td><code>data/xgboost_model.json</code> is overwritten on re-training with no versioning, rollback capability, or A/B comparison.</td>
+</tr>
+<tr>
+<td><strong>Hardcoded relative paths</strong></td>
+<td>All file paths (<code>noc-copilot/data/telemetry.db</code>, etc.) are relative to an assumed parent directory. Running from a different CWD will fail silently.</td>
+</tr>
+<tr>
+<td><strong>No health check dependencies</strong></td>
+<td><code>/health</code> endpoints return <code>{"status": "ok"}</code> unconditionally without verifying database connectivity, model loading, or RAG readiness.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-recommendations-next-steps">10. Recommendations / Next Steps</h2>
+<h3 id="critical-fix-immediately">🔴 Critical (Fix Immediately)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Files Affected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Add API authentication</strong> — Implement API key or JWT authentication on <code>/predict</code> and <code>/copilot</code> endpoints. At minimum, add a shared secret header check.</td>
+<td><code>engine/api.py</code>, <code>copilot/api.py</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Bind services to <code>127.0.0.1</code></strong> — Change <code>--host 0.0.0.0</code> to <code>--host 127.0.0.1</code> in <code>run.sh</code> unless remote access is explicitly required.</td>
+<td><code>run.sh</code> lines 51, 56, 72</td>
+</tr>
+</tbody>
+</table>
+<h3 id="high-fix-before-deployment">🟠 High (Fix Before Deployment)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Files Affected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td><strong>Add HTTPS/TLS</strong> — Configure Uvicorn with <code>--ssl-keyfile</code> and <code>--ssl-certfile</code>, or deploy behind an HTTPS reverse proxy (nginx/Caddy).</td>
+<td><code>run.sh</code>, new <code>nginx.conf</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Add rate limiting</strong> — Install <code>slowapi</code> or implement custom middleware to prevent API abuse.</td>
+<td><code>engine/api.py</code>, <code>copilot/api.py</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Sanitize error messages</strong> — Replace <code>str(e)</code> in HTTP 500 responses with generic messages. Log detailed errors server-side only.</td>
+<td><code>engine/api.py</code> line 86, <code>copilot/api.py</code> line 51</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Fix SQLite connection leak</strong> — Use <code>with sqlite3.connect(DB_PATH) as conn:</code> context manager in <code>engine/api.py</code>.</td>
+<td><code>engine/api.py</code> lines 36–42</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Pin dependency versions</strong> — Run <code>pip freeze &gt; requirements.lock</code> and reference the lockfile in CI.</td>
+<td><code>requirements.txt</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Add input validation ranges</strong> — Validate <code>risk_score</code> is between 0.0–1.0 and <code>time_to_impact</code> is ≥ -1.0 in the Pydantic model.</td>
+<td><code>copilot/api.py</code> lines 16–20</td>
+</tr>
+</tbody>
+</table>
+<h3 id="medium-fix-for-production-readiness">🟡 Medium (Fix for Production Readiness)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Files Affected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9</td>
+<td><strong>Replace <code>print()</code> with structured logging</strong> — Use Python <code>logging</code> module with appropriate levels (DEBUG, INFO, WARNING, ERROR).</td>
+<td>All <code>.py</code> files</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>Add Dockerfile</strong> — Package the application in a container for reproducible deployment.</td>
+<td>New <code>Dockerfile</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Add security headers</strong> — Use FastAPI middleware to add CSP, X-Frame-Options, HSTS, X-Content-Type-Options.</td>
+<td><code>engine/api.py</code>, <code>copilot/api.py</code></td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Fix health check endpoints</strong> — Verify DB connectivity and model status before returning <code>ok</code>.</td>
+<td><code>engine/api.py</code>, <code>copilot/api.py</code></td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Sanitize LLM prompt inputs</strong> — Strip or escape special characters from <code>interface</code> and <code>contributing_signals</code> before injecting into the LLM prompt.</td>
+<td><code>copilot/llm.py</code> lines 55–78</td>
+</tr>
+<tr>
+<td>14</td>
+<td><strong>Escape RAG content in HTML</strong> — Use <code>html.escape()</code> on <code>doc['chunk']</code> and <code>src</code> before passing to <code>unsafe_allow_html=True</code>.</td>
+<td><code>ui/app.py</code> lines 375, 378</td>
+</tr>
+<tr>
+<td>15</td>
+<td><strong>Remove unused dependencies</strong> — Drop <code>scikit-learn</code>, <code>pytest</code>, <code>pytest-timeout</code> from <code>requirements.txt</code> or actually use them.</td>
+<td><code>requirements.txt</code></td>
+</tr>
+<tr>
+<td>16</td>
+<td><strong>Add database migration tooling</strong> — Use Alembic or a simple version table to manage schema changes.</td>
+<td><code>faultsim/inject_fault.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="low-nice-to-have">🟢 Low (Nice to Have)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Files Affected</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>17</td>
+<td><strong>Add graceful signal handling</strong> — Catch SIGTERM/SIGINT in <code>inject_fault.py</code> daemon for clean shutdown.</td>
+<td><code>faultsim/inject_fault.py</code> line 84</td>
+</tr>
+<tr>
+<td>18</td>
+<td><strong>Pin container image tags</strong> — Change <code>frrouting/frr:latest</code> to a specific version.</td>
+<td><code>topology.clab.yml</code></td>
+</tr>
+<tr>
+<td>19</td>
+<td><strong>Add code coverage reporting</strong> — Configure <code>pytest-cov</code> and add coverage thresholds to CI.</td>
+<td>New <code>pytest.ini</code> or <code>pyproject.toml</code></td>
+</tr>
+<tr>
+<td>20</td>
+<td><strong>Push CI/CD workflow to GitHub</strong> — Regenerate token with <code>workflow</code> scope and push <code>.github/workflows/test.yml</code>.</td>
+<td>GitHub token settings</td>
+</tr>
+<tr>
+<td>21</td>
+<td><strong>Move log files from <code>/tmp/</code></strong> — Write logs to <code>data/logs/</code> directory with restricted permissions.</td>
+<td><code>run.sh</code> lines 46, 51, 56</td>
+</tr>
+<tr>
+<td>22</td>
+<td><strong>Add model versioning</strong> — Save timestamped model artifacts and track training metadata.</td>
+<td><code>engine/model.py</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>End of Report. All findings are based on actual source code inspection. No information was invented or assumed.</em></p>
+</body>
+</html>
