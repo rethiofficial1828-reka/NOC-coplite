@@ -10,15 +10,15 @@ An AI-powered Network Operations Center copilot that predicts network failures b
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Fault Simulator │────▶│ Predictive Engine │────▶│  NOC Copilot    │
-│  (Telemetry)     │     │  (XGBoost ML)    │     │  (RAG + LLM)    │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-        │                       │                        │
-        ▼                       ▼                        ▼
+┌─────────────────┐      ┌──────────────────┐       ┌─────────────────┐
+│  Fault Simulator │────▶│ Predictive Engine│────▶  │  NOC Copilot    │
+│  (Telemetry)     │     │  (XGBoost ML)    │       │  (RAG + LLM)    │
+└─────────────────┘      └──────────────────┘       └─────────────────┘
+        │                       │                          │
+        ▼                       ▼                          ▼
    SQLite DB              FastAPI :8000            FastAPI :8001
-                                                         │
-                          ┌──────────────────┐           │
+                                                           │
+                          ┌──────────────────┐             │
                           │ Streamlit Dashboard│◀──────────┘
                           │     :8501          │
                           └──────────────────┘
