@@ -9,7 +9,14 @@ app = FastAPI(title="NOC Copilot Predictive Engine API")
 # Initialize the predictor
 predictor = RiskPredictor()
 
-DB_PATH = "noc-copilot/data/telemetry.db"
+from config.settings import DB_PATH, DEVICE_REGISTRY, DEVICE_NAMES
+
+
+@app.get("/devices")
+def list_devices():
+    """Return the full device registry."""
+    return {"devices": DEVICE_REGISTRY}
+
 
 @app.get("/predict")
 def predict_endpoint(interface: str = Query("Branch3-Uplink", description="Interface name to analyze")):

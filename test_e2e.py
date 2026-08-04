@@ -4,11 +4,17 @@ import sqlite3
 import os
 import sys
 
-ENGINE_HEALTH = "http://localhost:8000/health"
-ENGINE_PREDICT = "http://localhost:8000/predict"
-COPILOT_HEALTH = "http://localhost:8001/health"
-COPILOT_API = "http://localhost:8001/copilot"
-DB_PATH = "noc-copilot/data/telemetry.db"
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT
+
+ENGINE_HEALTH = f"http://localhost:{ENGINE_PORT}/health"
+ENGINE_PREDICT = f"http://localhost:{ENGINE_PORT}/predict"
+COPILOT_HEALTH = f"http://localhost:{COPILOT_PORT}/health"
+COPILOT_API = f"http://localhost:{COPILOT_PORT}/copilot"
+
 
 def set_sim_mode(mode):
     conn = sqlite3.connect(DB_PATH)

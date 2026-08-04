@@ -2,9 +2,8 @@ import os
 import glob
 import numpy as np
 
-DOCS_DIR = "noc-copilot/copilot/docs"
-INDEX_PATH = "noc-copilot/data/faiss_index.bin"
-CHUNKS_PATH = "noc-copilot/data/chunks.txt"
+from config.settings import DOCS_DIR, INDEX_PATH, CHUNKS_PATH
+
 
 # Simple pure-python TF-IDF retriever to run 100% offline without downloading models
 class TFIDFRetriever:

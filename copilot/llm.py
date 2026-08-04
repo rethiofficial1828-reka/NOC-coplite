@@ -2,8 +2,10 @@ import requests
 import json
 import time
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+from config.settings import OLLAMA_URL
+
 MODEL_NAME = "phi3:latest"
+
 
 def get_fallback_explanation(interface, risk_score, time_to_impact, contributing_signals):
     """

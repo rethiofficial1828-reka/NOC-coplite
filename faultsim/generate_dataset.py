@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+from config.settings import DATA_DIR
+
 
 def generate_scenario(scenario_id, interface, mode="healthy"):
     """
@@ -101,9 +103,11 @@ def main():
         dfs.append(generate_scenario(s_id, "Branch3-Uplink", mode="congestion"))
         
     df = pd.concat(dfs, ignore_index=True)
-    os.makedirs("noc-copilot/data", exist_ok=True)
-    df.to_csv("noc-copilot/data/synthetic_telemetry.csv", index=False)
-    print(f"Dataset generated with {len(df)} samples and saved to noc-copilot/data/synthetic_telemetry.csv")
+    os.makedirs(DATA_DIR, exist_ok=True)
+    output_path = os.path.join(DATA_DIR, "synthetic_telemetry.csv")
+    df.to_csv(output_path, index=False)
+    print(f"Dataset generated with {len(df)} samples and saved to {output_path}")
+
 
 if __name__ == "__main__":
     main()

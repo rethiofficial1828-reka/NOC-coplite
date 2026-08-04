@@ -4,16 +4,17 @@ import unittest
 import pandas as pd
 import numpy as np
 
-# Add the noc-copilot folder directly to the Python path
-# This allows importing engine, copilot, and faultsim directly, bypassing the dash in 'noc-copilot'
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(project_root, "noc-copilot"))
+# Add the project root folder directly to the Python path
+project_root = os.path.dirname(os.path.abspath(__file__))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 class TestNocCopilot(unittest.TestCase):
     
     def test_01_imports(self):
         """Verify that all core modules can be imported without errors."""
         try:
+            import config.settings as settings
             import faultsim.generate_dataset as generate_dataset
             import faultsim.inject_fault as inject_fault
             import engine.features as features
@@ -23,6 +24,7 @@ class TestNocCopilot(unittest.TestCase):
             import copilot.llm as llm
             import copilot.api as copilot_api
             print("  [PASS] All modules successfully imported.")
+
         except ImportError as e:
             self.fail(f"Module import failed: {e}")
 

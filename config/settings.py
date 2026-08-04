@@ -1,0 +1,54 @@
+import os
+
+# Project root directory (parent directory of config package)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Key directories
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DOCS_DIR = os.path.join(PROJECT_ROOT, "copilot", "docs")
+
+# Core data & model file paths
+MODEL_PATH = os.path.join(DATA_DIR, "xgboost_model.json")
+DB_PATH = os.path.join(DATA_DIR, "telemetry.db")
+CHUNKS_PATH = os.path.join(DATA_DIR, "chunks.txt")
+INDEX_PATH = os.path.join(DATA_DIR, "faiss_index.bin")
+
+# External service URLs & Ports
+OLLAMA_URL = "http://localhost:11434/api/generate"
+ENGINE_PORT = 8000
+COPILOT_PORT = 8001
+STREAMLIT_PORT = 8501
+
+# ---------------------------------------------------------------------------
+# Device Registry — single source of truth for all monitored network nodes.
+# The "name" field is used as the interface key in the telemetry database.
+# ---------------------------------------------------------------------------
+DEVICE_REGISTRY = [
+    {
+        "id": "core-01",
+        "name": "Campus Core",
+        "type": "Core Switch",
+        "location": "Main Building",
+    },
+    {
+        "id": "fw-01",
+        "name": "Firewall",
+        "type": "Firewall",
+        "location": "Data Center",
+    },
+    {
+        "id": "rtr-01",
+        "name": "Router 1",
+        "type": "Router",
+        "location": "Block A",
+    },
+    {
+        "id": "branch3-uplink",
+        "name": "Branch3-Uplink",
+        "type": "WAN Interface",
+        "location": "Branch Office",
+    },
+]
+
+# Convenience: ordered list of interface names (matches DB "interface" column)
+DEVICE_NAMES = [d["name"] for d in DEVICE_REGISTRY]

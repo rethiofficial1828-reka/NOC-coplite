@@ -22,11 +22,15 @@ import numpy as np
 import requests
 
 # --- Config ---
-ENGINE_URL = "http://localhost:8000"
-COPILOT_URL = "http://localhost:8001"
-DB_PATH = "noc-copilot/data/telemetry.db"
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(os.path.join(PROJECT_ROOT, "noc-copilot"))
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT
+
+ENGINE_URL = f"http://localhost:{ENGINE_PORT}"
+COPILOT_URL = f"http://localhost:{COPILOT_PORT}"
+
 
 # --- Tracking ---
 RESULTS = []  # list of (category, name, status, detail)
@@ -82,6 +86,7 @@ def run_unit_tests():
 
     # 1a. Module imports
     try:
+        import config.settings
         import faultsim.generate_dataset
         import faultsim.inject_fault
         import engine.features
@@ -91,6 +96,7 @@ def run_unit_tests():
         import copilot.llm
         import copilot.api
         record("UNIT", "All core modules import without error", True)
+
     except Exception as e:
         record("UNIT", "All core modules import without error", False, str(e))
 

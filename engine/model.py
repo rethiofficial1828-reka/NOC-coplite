@@ -5,8 +5,10 @@ import numpy as np
 import xgboost as xgb
 from .features import extract_features_from_df
 
-MODEL_PATH = "noc-copilot/data/xgboost_model.json"
-DATA_PATH = "noc-copilot/data/synthetic_telemetry.csv"
+from config.settings import MODEL_PATH, DATA_DIR
+
+DATA_PATH = os.path.join(DATA_DIR, "synthetic_telemetry.csv")
+
 
 def preprocess_training_data():
     """
