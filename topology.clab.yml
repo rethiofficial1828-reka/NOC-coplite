@@ -1,0 +1,22 @@
+name: noc-copilot-lab
+
+mgmt:
+  network: noc-mgmt
+  ipv4-subnet: 172.20.20.0/24
+
+topology:
+  nodes:
+    hub:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.10
+
+    branch1:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.11
+
+  links:
+    - endpoints:
+        - "hub:eth1"
+        - "branch1:eth1"

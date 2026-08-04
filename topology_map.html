@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Network Topology — Traffic Control Map</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2035;
+            --bg-card-hover: #1f2a45;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #1e293b;
+            --glow-blue: rgba(59, 130, 246, 0.15);
+            --glow-green: rgba(16, 185, 129, 0.15);
+            --glow-amber: rgba(245, 158, 11, 0.15);
+            --glow-red: rgba(239, 68, 68, 0.15);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139, 92, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(6, 182, 212, 0.04) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .header .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 400;
+        }
+
+        .header .badge {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.35rem 1rem;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 999px;
+            color: var(--accent-green);
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .badge::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse-dot 2s infinite;
+        }
+
+        /* Topology Visual */
+        .topology-visual {
+            position: relative;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            margin-bottom: 3rem;
+            overflow: hidden;
+            animation: fadeIn 1s ease 0.2s both;
+        }
+
+        .topology-visual::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .topo-layer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .topo-node {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.2rem 1.5rem;
+            text-align: center;
+            min-width: 180px;
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+
+        .topo-node:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
+        }
+
+        .topo-node .icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .topo-node .label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .topo-node .ip {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .topo-node .status {
+            font-size: 0.7rem;
+            margin-top: 0.4rem;
+            font-weight: 500;
+        }
+
+        .status-active { color: var(--accent-green); }
+        .status-down { color: var(--accent-red); }
+        .status-isolated { color: var(--accent-amber); }
+
+        .node-internet { border-color: rgba(139, 92, 246, 0.4); }
+        .node-firewall { border-color: rgba(239, 68, 68, 0.4); }
+        .node-switch { border-color: rgba(59, 130, 246, 0.4); }
+        .node-wifi { border-color: rgba(16, 185, 129, 0.4); }
+        .node-pc { border-color: rgba(6, 182, 212, 0.5); box-shadow: 0 0 20px rgba(6, 182, 212, 0.1); }
+        .node-vm { border-color: rgba(245, 158, 11, 0.4); }
+        .node-down { border-color: rgba(100, 116, 139, 0.3); opacity: 0.5; }
+
+        /* Connection lines */
+        .connector {
+            display: flex;
+            justify-content: center;
+            margin: 0.5rem 0;
+        }
+
+        .connector .line {
+            width: 2px;
+            height: 30px;
+            background: linear-gradient(to bottom, var(--accent-blue), rgba(59, 130, 246, 0.2));
+            position: relative;
+        }
+
+        .connector .line::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        .connector-split {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 0;
+            margin: 0.5rem 0;
+            position: relative;
+            height: 40px;
+        }
+
+        .connector-split::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 2px;
+            height: 15px;
+            background: var(--accent-blue);
+        }
+
+        .connector-split::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: var(--accent-blue);
+        }
+
+        /* Zone Cards */
+        .zones-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .zone-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease both;
+        }
+
+        .zone-card:nth-child(1) { animation-delay: 0.3s; }
+        .zone-card:nth-child(2) { animation-delay: 0.45s; }
+        .zone-card:nth-child(3) { animation-delay: 0.6s; }
+
+        .zone-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .zone-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .zone-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .zone-1 .zone-icon { background: var(--glow-green); }
+        .zone-2 .zone-icon { background: var(--glow-amber); }
+        .zone-3 .zone-icon { background: var(--glow-red); }
+
+        .zone-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .zone-subtitle {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .zone-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            padding: 0.6rem 0.8rem;
+        }
+
+        .detail-label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 0.15rem;
+        }
+
+        .detail-value {
+            font-size: 0.85rem;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', 'Courier New', monospace;
+        }
+
+        .detail-full {
+            grid-column: 1 / -1;
+        }
+
+        /* QoS Traffic Policy Table */
+        .qos-section {
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease 0.7s both;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title span {
+            font-size: 1.5rem;
+        }
+
+        .qos-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .qos-table thead th {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.9rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--accent-blue);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qos-table tbody td {
+            padding: 0.8rem 1rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            transition: background 0.2s;
+        }
+
+        .qos-table tbody tr:hover td {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .qos-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 600;
+        }
+
+        .p-critical { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+        .p-high { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .p-medium { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+        .p-low { background: rgba(100, 116, 139, 0.15); color: #94a3b8; }
+        .p-blocked { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .dscp-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            background: rgba(6, 182, 212, 0.1);
+            color: var(--accent-cyan);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        /* Interface Table */
+        .interface-section {
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease 0.85s both;
+        }
+
+        .if-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .if-table thead th {
+            background: rgba(139, 92, 246, 0.1);
+            padding: 0.9rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--accent-purple);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .if-table tbody td {
+            padding: 0.8rem 1rem;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .if-table tbody tr:hover td { background: rgba(139, 92, 246, 0.05); }
+        .if-table tbody tr:last-child td { border-bottom: none; }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .dot-green { background: var(--accent-green); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+        .dot-red { background: var(--accent-red); }
+        .dot-amber { background: var(--accent-amber); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+
+        /* Bandwidth allocation bars */
+        .bw-section {
+            animation: fadeInUp 0.6s ease 1s both;
+        }
+
+        .bw-bars {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .bw-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+        }
+
+        .bw-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.82rem;
+        }
+
+        .bw-bar-track {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .bw-bar-fill {
+            height: 100%;
+            border-radius: 999px;
+            transition: width 1.5s ease;
+        }
+
+        .bw-academic { background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); width: 40%; }
+        .bw-productivity { background: linear-gradient(90deg, var(--accent-green), #34d399); width: 25%; }
+        .bw-streaming { background: linear-gradient(90deg, var(--accent-amber), #fbbf24); width: 20%; }
+        .bw-reserved { background: linear-gradient(90deg, var(--accent-purple), #a78bfa); width: 15%; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            border-top: 1px solid var(--border);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.5; transform: translateX(-50%) scale(1.5); }
+        }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .header h1 { font-size: 1.6rem; }
+            .topo-layer { flex-direction: column; gap: 0.5rem; }
+            .zones-grid { grid-template-columns: 1fr; }
+            .zone-details { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Header -->
+        <div class="header">
+            <h1>🌐 College Network Topology</h1>
+            <p class="subtitle">Air-Gapped NOC Copilot — Traffic Control Reference Map</p>
+            <div class="badge">LIVE — Derived from host reconnaissance</div>
+        </div>
+
+        <!-- Topology Visual -->
+        <div class="topology-visual">
+            <!-- Internet -->
+            <div class="topo-layer">
+                <div class="topo-node node-internet">
+                    <span class="icon">🌍</span>
+                    <div class="label">Internet (ISP)</div>
+                    <div class="status status-active">● Public WAN</div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="line"></div></div>
+
+            <!-- Firewall -->
+            <div class="topo-layer">
+                <div class="topo-node node-firewall">
+                    <span class="icon">🛡️</span>
+                    <div class="label">College Firewall</div>
+                    <div class="ip">10.50.0.1</div>
+                    <div class="status status-active">● Default Gateway</div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="line"></div></div>
+
+            <!-- Core Layer -->
+            <div class="topo-layer">
+                <div class="topo-node node-switch">
+                    <span class="icon">🔀</span>
+                    <div class="label">Core Switch (L3)</div>
+                    <div class="status status-active">● Routing VLANs</div>
+                </div>
+                <div class="topo-node node-wifi">
+                    <span class="icon">📡</span>
+                    <div class="label">Wireless Controller</div>
+                    <div class="ip">10.50.0.0/22</div>
+                    <div class="status status-active">● 1022 hosts capacity</div>
+                </div>
+                <div class="topo-node node-down">
+                    <span class="icon">🖥️</span>
+                    <div class="label">Wired LAN</div>
+                    <div class="ip">domain.name</div>
+                    <div class="status status-down">● Disconnected</div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="line"></div></div>
+
+            <!-- Your PC -->
+            <div class="topo-layer">
+                <div class="topo-node node-pc" style="min-width: 240px;">
+                    <span class="icon">💻</span>
+                    <div class="label">Your PC (Windows 10)</div>
+                    <div class="ip">10.50.0.231</div>
+                    <div style="margin-top: 0.3rem;">
+                        <span class="ip" style="font-size: 0.68rem;">fe80::ca64:d07:a2a4:8146</span>
+                    </div>
+                    <div class="status status-active">● Connected via Wi-Fi</div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="line"></div></div>
+
+            <!-- VM Layer -->
+            <div class="topo-layer">
+                <div class="topo-node node-vm">
+                    <span class="icon">🐉</span>
+                    <div class="label">Kali Linux VM</div>
+                    <div class="ip">192.168.56.x</div>
+                    <div class="status status-isolated">● Air-Gapped (Host-Only)</div>
+                </div>
+                <div class="topo-node" style="border-color: rgba(245, 158, 11, 0.3);">
+                    <span class="icon">🔒</span>
+                    <div class="label">VBox Host Adapter</div>
+                    <div class="ip">192.168.56.1/24</div>
+                    <div class="status status-isolated">● No Internet Routing</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zone Cards -->
+        <div class="section-title"><span>📍</span> Network Zones</div>
+        <div class="zones-grid">
+            <div class="zone-card zone-1">
+                <div class="zone-header">
+                    <div class="zone-icon">📡</div>
+                    <div>
+                        <div class="zone-title">Zone 1 — Campus Wi-Fi</div>
+                        <div class="zone-subtitle">Primary network for students & faculty</div>
+                    </div>
+                </div>
+                <div class="zone-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Subnet</div>
+                        <div class="detail-value">10.50.0.0/22</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Gateway</div>
+                        <div class="detail-value">10.50.0.1</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Your IP</div>
+                        <div class="detail-value" style="color: var(--accent-cyan);">10.50.0.231</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Capacity</div>
+                        <div class="detail-value">1022 hosts</div>
+                    </div>
+                    <div class="detail-item detail-full">
+                        <div class="detail-label">Purpose</div>
+                        <div class="detail-value" style="font-family: Inter, sans-serif; font-weight: 400;">Internet, LMS, cloud apps, email, browsing</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="zone-card zone-2">
+                <div class="zone-header">
+                    <div class="zone-icon">🔒</div>
+                    <div>
+                        <div class="zone-title">Zone 2 — Lab Network</div>
+                        <div class="zone-subtitle">Isolated VirtualBox host-only environment</div>
+                    </div>
+                </div>
+                <div class="zone-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Subnet</div>
+                        <div class="detail-value">192.168.56.0/24</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Gateway</div>
+                        <div class="detail-value" style="color: var(--accent-amber);">None (Isolated)</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Host IP</div>
+                        <div class="detail-value">192.168.56.1</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Capacity</div>
+                        <div class="detail-value">254 hosts</div>
+                    </div>
+                    <div class="detail-item detail-full">
+                        <div class="detail-label">Purpose</div>
+                        <div class="detail-value" style="font-family: Inter, sans-serif; font-weight: 400;">Security labs, pen testing, malware analysis</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="zone-card zone-3">
+                <div class="zone-header">
+                    <div class="zone-icon">🚫</div>
+                    <div>
+                        <div class="zone-title">Zone 3 — Wired Campus LAN</div>
+                        <div class="zone-subtitle">Domain-joined machines (currently offline)</div>
+                    </div>
+                </div>
+                <div class="zone-details">
+                    <div class="detail-item">
+                        <div class="detail-label">Subnet</div>
+                        <div class="detail-value" style="color: var(--text-muted);">Unknown</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">DNS Suffix</div>
+                        <div class="detail-value">domain.name</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Status</div>
+                        <div class="detail-value" style="color: var(--accent-red);">⛔ Disconnected</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Auth</div>
+                        <div class="detail-value">802.1X</div>
+                    </div>
+                    <div class="detail-item detail-full">
+                        <div class="detail-label">Purpose</div>
+                        <div class="detail-value" style="font-family: Inter, sans-serif; font-weight: 400;">Faculty PCs, printers, domain services</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- QoS Traffic Policy -->
+        <div class="qos-section">
+            <div class="section-title"><span>🚦</span> Traffic Control Policy (QoS)</div>
+            <table class="qos-table">
+                <thead>
+                    <tr>
+                        <th>Priority</th>
+                        <th>Traffic Class</th>
+                        <th>DSCP Marking</th>
+                        <th>Bandwidth</th>
+                        <th>Peak Hours (08–17)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="priority-badge p-critical">P1 — Critical</span></td>
+                        <td>VoIP & Video Conferencing</td>
+                        <td><span class="dscp-tag">EF (46)</span></td>
+                        <td>Guaranteed 15%</td>
+                        <td>Always prioritized</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge p-high">P2 — High</span></td>
+                        <td>LMS (Moodle, Canvas, Blackboard)</td>
+                        <td><span class="dscp-tag">AF31 (26)</span></td>
+                        <td>Guaranteed 25%</td>
+                        <td>Full priority</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge p-medium">P3 — Medium</span></td>
+                        <td>Email, ERP, Cloud Productivity</td>
+                        <td><span class="dscp-tag">AF21 (18)</span></td>
+                        <td>Guaranteed 20%</td>
+                        <td>Normal</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge p-low">P4 — Low</span></td>
+                        <td>General Web Browsing</td>
+                        <td><span class="dscp-tag">BE (0)</span></td>
+                        <td>Best Effort 20%</td>
+                        <td>Normal</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge p-low">P5 — Throttled</span></td>
+                        <td>Streaming (YouTube, Netflix)</td>
+                        <td><span class="dscp-tag">BE (0)</span></td>
+                        <td>Capped at 20%</td>
+                        <td>480p limit, deprioritized</td>
+                    </tr>
+                    <tr>
+                        <td><span class="priority-badge p-blocked">BLOCKED</span></td>
+                        <td>Torrents, P2P, Gaming</td>
+                        <td>—</td>
+                        <td>0%</td>
+                        <td>Dropped at firewall</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Interface Summary -->
+        <div class="interface-section">
+            <div class="section-title"><span>🔌</span> Interface Summary</div>
+            <table class="if-table">
+                <thead>
+                    <tr>
+                        <th>Interface</th>
+                        <th>IPv4 Address</th>
+                        <th>Subnet</th>
+                        <th>Gateway</th>
+                        <th>Status</th>
+                        <th>Zone</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Wi-Fi</td>
+                        <td><span class="dscp-tag">10.50.0.231</span></td>
+                        <td>10.50.0.0/22</td>
+                        <td>10.50.0.1</td>
+                        <td><span class="status-dot dot-green"></span>Active</td>
+                        <td>Zone 1</td>
+                    </tr>
+                    <tr>
+                        <td>Ethernet 2 (VBox)</td>
+                        <td><span class="dscp-tag">192.168.56.1</span></td>
+                        <td>192.168.56.0/24</td>
+                        <td>—</td>
+                        <td><span class="status-dot dot-amber"></span>Isolated</td>
+                        <td>Zone 2</td>
+                    </tr>
+                    <tr>
+                        <td>Ethernet (Wired)</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td><span class="status-dot dot-red"></span>Down</td>
+                        <td>Zone 3</td>
+                    </tr>
+                    <tr>
+                        <td>WLAN LAN* 1</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td><span class="status-dot dot-red"></span>Down</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>WLAN LAN* 2</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td style="color: var(--text-muted);">—</td>
+                        <td><span class="status-dot dot-red"></span>Down</td>
+                        <td>—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bandwidth Allocation -->
+        <div class="bw-section">
+            <div class="section-title"><span>📊</span> Peak-Hours Bandwidth Allocation</div>
+            <div class="bw-bars">
+                <div class="bw-item">
+                    <div class="bw-label">
+                        <span>Academic (LMS, ERP)</span>
+                        <span style="color: var(--accent-blue);">40%</span>
+                    </div>
+                    <div class="bw-bar-track"><div class="bw-bar-fill bw-academic"></div></div>
+                </div>
+                <div class="bw-item">
+                    <div class="bw-label">
+                        <span>Productivity (Email, Cloud)</span>
+                        <span style="color: var(--accent-green);">25%</span>
+                    </div>
+                    <div class="bw-bar-track"><div class="bw-bar-fill bw-productivity"></div></div>
+                </div>
+                <div class="bw-item">
+                    <div class="bw-label">
+                        <span>Streaming & Browsing</span>
+                        <span style="color: var(--accent-amber);">20%</span>
+                    </div>
+                    <div class="bw-bar-track"><div class="bw-bar-fill bw-streaming"></div></div>
+                </div>
+                <div class="bw-item">
+                    <div class="bw-label">
+                        <span>VoIP & Video (Reserved)</span>
+                        <span style="color: var(--accent-purple);">15%</span>
+                    </div>
+                    <div class="bw-bar-track"><div class="bw-bar-fill bw-reserved"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            College Network Topology — Generated from ipconfig reconnaissance &bull; NOC Copilot Traffic Control Reference &bull; Air-Gapped Deployment
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,309 @@
+name: NOC Copilot — Full Test Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # Manual trigger
+
+env:
+  PYTHON_VERSION: "3.13"
+  PROJECT_ROOT: noc-copilot
+
+jobs:
+
+  # ──────────────────────────────────────────────
+  # JOB 1: Lint & Static Analysis
+  # ──────────────────────────────────────────────
+  lint:
+    name: 🔍 Lint & Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pylint
+          pip install -r requirements.txt
+
+      - name: Run flake8 (syntax & style)
+        run: |
+          flake8 ${{ env.PROJECT_ROOT }} \
+            --count \
+            --select=E9,F63,F7,F82 \
+            --show-source \
+            --statistics
+
+      - name: Run flake8 (warnings)
+        run: |
+          flake8 ${{ env.PROJECT_ROOT }} \
+            --count \
+            --exit-zero \
+            --max-complexity=10 \
+            --max-line-length=120 \
+            --statistics
+
+  # ──────────────────────────────────────────────
+  # JOB 2: Unit Tests
+  # ──────────────────────────────────────────────
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python -m pytest ${{ env.PROJECT_ROOT }}/tests/test_unit.py \
+            -v \
+            --tb=short \
+            --junitxml=reports/unit-results.xml
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: reports/unit-results.xml
+
+  # ──────────────────────────────────────────────
+  # JOB 3: Integration Tests (API Contracts)
+  # ──────────────────────────────────────────────
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start backend services
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          # Generate training data and train model
+          python ${{ env.PROJECT_ROOT }}/faultsim/generate_dataset.py
+
+          # Start Engine API (port 8000)
+          python -m uvicorn engine.api:app --host 0.0.0.0 --port 8000 &
+          ENGINE_PID=$!
+
+          # Start Copilot API (port 8001)
+          python -m uvicorn copilot.api:app --host 0.0.0.0 --port 8001 &
+          COPILOT_PID=$!
+
+          # Wait for services to be ready
+          echo "Waiting for services to start..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+              echo "✅ All services are up!"
+              break
+            fi
+            echo "  Attempt $i/30..."
+            sleep 2
+          done
+
+          # Save PIDs for cleanup
+          echo "ENGINE_PID=$ENGINE_PID" >> $GITHUB_ENV
+          echo "COPILOT_PID=$COPILOT_PID" >> $GITHUB_ENV
+
+      - name: Run integration tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python -m pytest ${{ env.PROJECT_ROOT }}/tests/test_integration.py \
+            -v \
+            --tb=short \
+            --junitxml=reports/integration-results.xml
+
+      - name: Stop services
+        if: always()
+        run: |
+          kill ${{ env.ENGINE_PID }} ${{ env.COPILOT_PID }} 2>/dev/null || true
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: reports/integration-results.xml
+
+  # ──────────────────────────────────────────────
+  # JOB 4: End-to-End Scenario Tests
+  # ──────────────────────────────────────────────
+  e2e-tests:
+    name: 🔄 E2E Scenario Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start full stack
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python ${{ env.PROJECT_ROOT }}/faultsim/generate_dataset.py
+          python -m uvicorn engine.api:app --host 0.0.0.0 --port 8000 &
+          echo "ENGINE_PID=$!" >> $GITHUB_ENV
+          python -m uvicorn copilot.api:app --host 0.0.0.0 --port 8001 &
+          echo "COPILOT_PID=$!" >> $GITHUB_ENV
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+              echo "✅ Stack ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run E2E scenario tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python -m pytest ${{ env.PROJECT_ROOT }}/tests/test_e2e.py \
+            -v \
+            --tb=short \
+            --junitxml=reports/e2e-results.xml
+
+      - name: Stop services
+        if: always()
+        run: |
+          kill ${{ env.ENGINE_PID }} ${{ env.COPILOT_PID }} 2>/dev/null || true
+
+      - name: Upload E2E test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: reports/e2e-results.xml
+
+  # ──────────────────────────────────────────────
+  # JOB 5: Edge Case & Stress Tests
+  # ──────────────────────────────────────────────
+  stress-tests:
+    name: 💪 Edge Case & Stress Tests
+    runs-on: ubuntu-latest
+    needs: integration-tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Start full stack
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python ${{ env.PROJECT_ROOT }}/faultsim/generate_dataset.py
+          python -m uvicorn engine.api:app --host 0.0.0.0 --port 8000 &
+          echo "ENGINE_PID=$!" >> $GITHUB_ENV
+          python -m uvicorn copilot.api:app --host 0.0.0.0 --port 8001 &
+          echo "COPILOT_PID=$!" >> $GITHUB_ENV
+
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1 && \
+               curl -sf http://localhost:8001/health > /dev/null 2>&1; then
+              echo "✅ Stack ready"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Run stress & edge case tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/${{ env.PROJECT_ROOT }}
+        run: |
+          python -m pytest ${{ env.PROJECT_ROOT }}/tests/test_stress.py \
+            -v \
+            --tb=short \
+            --junitxml=reports/stress-results.xml
+
+      - name: Stop services
+        if: always()
+        run: |
+          kill ${{ env.ENGINE_PID }} ${{ env.COPILOT_PID }} 2>/dev/null || true
+
+      - name: Upload stress test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stress-test-results
+          path: reports/stress-results.xml
+
+  # ──────────────────────────────────────────────
+  # JOB 6: Master Test Report
+  # ──────────────────────────────────────────────
+  test-report:
+    name: 📊 Test Report
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, e2e-tests, stress-tests]
+    if: always()
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          path: all-reports
+
+      - name: Generate summary
+        run: |
+          echo "## 🧪 NOC Copilot Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration Tests | ${{ needs.integration-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stress Tests | ${{ needs.stress-tests.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,31 @@
+SOURCE:past_incidents.txt
+CONTENT:Historical Incidents Log:
+- Incident INC-492: High utilization on Branch3 uplink was caused by a backup synchronization job (sustained bulk transfer) starting during business hours. Latency spiked to 180ms causing VoIP call drops. The resolution was applying rate-limiting to the bulk data class.
+- Incident INC-511: Packet loss on primary link was caused by transient hardware issues on the BGP next-hop router. Rerouting traffic to the backup path resolved the issue.
+
+SOURCE:runbook_congestion.txt
+CONTENT:Runbook: Congestion Mitigation on Branch Links
+
+SOURCE:runbook_congestion.txt
+CONTENT:- In case of congestion on the primary MPLS uplink (utilization > 90% or latency > 150ms):
+
+SOURCE:runbook_congestion.txt
+CONTENT:1. Shift VoIP and video traffic classes to the backup SD-WAN tunnel (broadband-tunnel-01) to protect real-time services.
+
+SOURCE:runbook_congestion.txt
+CONTENT:2. Apply a rate-limit (QoS policing) on the bulk-data class (e.g. limit to 10% of total bandwidth) to stop saturation.
+
+SOURCE:runbook_congestion.txt
+CONTENT:3. Pre-stage reroute of non-critical branch traffic via the secondary path. Confirm BGP next-hop visibility before applying.
+
+SOURCE:runbook_congestion.txt
+CONTENT:- Verification: After applying mitigation, check utilization on the primary path; it should drop back below 70% within 30 seconds.
+
+SOURCE:network_topology.txt
+CONTENT:Network Topology Notes:
+- Branch3 (approx 40 users) connects to Head Office (Hub) and Data Centre 1 (DC1) via two paths:
+  1. Primary MPLS Link: Direct private link between Branch3 and DC1. This is the main path for high-priority traffic like VoIP and CRM.
+  2. Backup SD-WAN Link: IPsec VPN tunnel over public broadband (tunnel interface broadband-tunnel-01). This link acts as a backup path.
+- VoIP and CRM traffic are marked with DSCP EF (Expedited Forwarding) and AF21 respectively. Bulk data transfer uses the default best-effort class.
+- The BGP next-hop for the primary route to DC1 is 10.0.3.1. The backup tunnel BGP next-hop is 192.168.30.2.
+

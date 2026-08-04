@@ -1,0 +1,6 @@
+Runbook: Congestion Mitigation on Branch Links
+- In case of congestion on the primary MPLS uplink (utilization > 90% or latency > 150ms):
+  1. Shift VoIP and video traffic classes to the backup SD-WAN tunnel (broadband-tunnel-01) to protect real-time services.
+  2. Apply a rate-limit (QoS policing) on the bulk-data class (e.g. limit to 10% of total bandwidth) to stop saturation.
+  3. Pre-stage reroute of non-critical branch traffic via the secondary path. Confirm BGP next-hop visibility before applying.
+- Verification: After applying mitigation, check utilization on the primary path; it should drop back below 70% within 30 seconds.

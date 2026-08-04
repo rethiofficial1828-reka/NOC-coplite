@@ -1,0 +1,584 @@
+# ============================================================
+#  NOC Copilot — Test Scenarios Configuration
+#  Define all test scenarios, thresholds, and expected outcomes
+# ============================================================
+
+project:
+  name: "Air-Gapped Predictive NOC Copilot"
+  version: "1.0.0"
+  author: "College Network Security Lab"
+  description: "Predictive network operations copilot with XGBoost ML engine and RAG-grounded recommendations"
+
+# ──────────────────────────────────────────────
+# Environment Configuration
+# ──────────────────────────────────────────────
+environment:
+  python_version: "3.13"
+  virtual_env: "venv"
+  
+  services:
+    engine:
+      name: "Predictive Engine API"
+      host: "localhost"
+      port: 8000
+      health_endpoint: "/health"
+      startup_timeout_s: 30
+
+    copilot:
+      name: "Copilot RAG & LLM API"
+      host: "localhost"
+      port: 8001
+      health_endpoint: "/health"
+      startup_timeout_s: 30
+
+    dashboard:
+      name: "Streamlit Dashboard"
+      host: "localhost"
+      port: 8501
+      startup_timeout_s: 15
+
+    simulator:
+      name: "Telemetry Simulation Daemon"
+      type: "background"
+      interval_s: 2
+
+  database:
+    type: "sqlite3"
+    path: "data/telemetry.db"
+    tables:
+      - name: "metrics"
+        columns: [timestamp, interface, utilization, latency, jitter, drops, routing_flaps]
+      - name: "sim_config"
+        columns: [key, value]
+
+# ──────────────────────────────────────────────
+# Network Topology (from ipconfig recon)
+# ──────────────────────────────────────────────
+topology:
+  zones:
+    - name: "Campus Wi-Fi"
+      zone_id: 1
+      subnet: "10.50.0.0/22"
+      gateway: "10.50.0.1"
+      host_ip: "10.50.0.231"
+      status: "active"
+      capacity: 1022
+      purpose: "Student/faculty wireless — LMS, email, browsing"
+
+    - name: "Lab Network"
+      zone_id: 2
+      subnet: "192.168.56.0/24"
+      gateway: null
+      host_ip: "192.168.56.1"
+      status: "isolated"
+      capacity: 254
+      purpose: "Security labs, pen testing, VM environment"
+
+    - name: "Wired Campus LAN"
+      zone_id: 3
+      subnet: "unknown"
+      dns_suffix: "domain.name"
+      status: "disconnected"
+      purpose: "Faculty PCs, printers, domain services"
+
+  monitored_interfaces:
+    - name: "Branch3-Uplink"
+      type: "MPLS"
+      link: "DC1 <-> Branch3"
+      users: 40
+
+# ──────────────────────────────────────────────
+# Test Thresholds & Baselines
+# ──────────────────────────────────────────────
+thresholds:
+  risk_score:
+    green: 0.3       # Below this = healthy
+    amber: 0.6       # Between green and red = warning
+    red: 0.8         # Above this = critical
+
+  utilization:
+    normal: 50.0     # percent
+    warning: 75.0
+    critical: 85.0
+
+  latency:
+    normal_ms: 25.0
+    warning_ms: 80.0
+    critical_ms: 150.0
+
+  jitter:
+    normal_ms: 5.0
+    warning_ms: 10.0
+    critical_ms: 20.0
+
+  drops:
+    normal: 0
+    warning: 2
+    critical: 5
+
+  api_response:
+    engine_max_ms: 500
+    copilot_max_ms: 10000
+
+# ──────────────────────────────────────────────
+# Test Scenarios
+# ──────────────────────────────────────────────
+test_scenarios:
+
+  # --- UNIT TESTS ---
+  unit_tests:
+    - id: "UNIT-001"
+      name: "Core module imports"
+      description: "All Python modules import without errors"
+      modules:
+        - faultsim.generate_dataset
+        - faultsim.inject_fault
+        - engine.features
+        - engine.model
+        - engine.api
+        - copilot.rag
+        - copilot.llm
+        - copilot.api
+      expected: "All imports succeed"
+
+    - id: "UNIT-002"
+      name: "Feature extraction — flat healthy data"
+      description: "30 samples of constant healthy telemetry"
+      input:
+        utilization: 45.0
+        latency: 20.0
+        jitter: 3.0
+        drops: 0.0
+        routing_flaps: 0
+        samples: 30
+      expected:
+        utilization_current: 45.0
+        latency_current: 20.0
+        utilization_slope: 0.0
+        delta_baseline: 0.0
+
+    - id: "UNIT-003"
+      name: "Feature extraction — rising congestion"
+      description: "30 samples with linearly increasing metrics"
+      input:
+        utilization: [50, 95]   # linspace start, end
+        latency: [25, 160]
+        jitter: [3, 18]
+        drops: [0, 8]
+        routing_flaps: 0
+        samples: 30
+      expected:
+        utilization_slope: "> 0"
+        latency_slope: "> 0"
+        utilization_current: 95.0
+        latency_current: 160.0
+
+    - id: "UNIT-004"
+      name: "compute_slope correctness"
+      description: "Mathematical validation of linear regression slope"
+      test_cases:
+        - input: [0, 1, 2, 3, 4]
+          expected_slope: 1.0
+          tolerance: 0.001
+        - input: [5, 5, 5, 5]
+          expected_slope: 0.0
+          tolerance: 0.001
+        - input: [42]
+          expected_slope: 0.0
+
+    - id: "UNIT-005"
+      name: "RiskPredictor — healthy input"
+      description: "Flat healthy telemetry should yield risk < 0.16"
+      input:
+        utilization: 44.0
+        latency: 19.0
+        jitter: 2.5
+        drops: 0.0
+        routing_flaps: 0
+      expected:
+        risk_score: "< 0.16"
+
+    - id: "UNIT-006"
+      name: "RiskPredictor — congested input"
+      description: "Rising congestion telemetry should yield risk > 0.5"
+      input:
+        utilization: [50, 92]
+        latency: [25, 140]
+        jitter: [3, 15]
+        drops: [0, 5]
+        routing_flaps: 0
+      expected:
+        risk_score: "> 0.5"
+
+    - id: "UNIT-007"
+      name: "RAG retriever schema"
+      description: "RAG returns results with chunk, source, score fields"
+      input:
+        query: "congestion MPLS Branch3"
+        k: 3
+      expected:
+        min_results: 1
+        required_fields: [chunk, source, score]
+
+    - id: "UNIT-008"
+      name: "LLM fallback JSON schema"
+      description: "Template fallback returns all required JSON fields"
+      expected_fields:
+        - predicted_issue
+        - confidence
+        - time_to_impact
+        - contributing_signals
+        - affected_scope
+        - root_cause_hypothesis
+        - recommended_actions
+
+    - id: "UNIT-009"
+      name: "Dataset generation"
+      description: "Synthetic data generator produces correct scenarios"
+      test_cases:
+        - mode: "healthy"
+          expected_rows: 450
+          expected_max_label: 0
+        - mode: "congestion"
+          expected_rows: 450
+          expected_max_label: 1
+
+  # --- INTEGRATION TESTS ---
+  integration_tests:
+    - id: "INT-001"
+      name: "Engine health check"
+      method: "GET"
+      url: "http://localhost:8000/health"
+      expected_status: 200
+      expected_body:
+        status: "ok"
+
+    - id: "INT-002"
+      name: "Copilot health check"
+      method: "GET"
+      url: "http://localhost:8001/health"
+      expected_status: 200
+      expected_body:
+        status: "ok"
+
+    - id: "INT-003"
+      name: "Engine /predict JSON schema"
+      method: "GET"
+      url: "http://localhost:8000/predict"
+      params:
+        interface: "Branch3-Uplink"
+      expected_status: 200
+      required_keys:
+        - interface
+        - risk_score
+        - time_to_impact
+        - contributing_signals
+        - status
+        - metrics
+      required_metric_keys:
+        - utilization
+        - latency
+        - jitter
+        - drops
+        - routing_flaps
+
+    - id: "INT-004"
+      name: "Copilot /copilot JSON schema"
+      method: "POST"
+      url: "http://localhost:8001/copilot"
+      payload:
+        interface: "Branch3-Uplink"
+        risk_score: 0.75
+        time_to_impact: 5.0
+        contributing_signals: ["test signal"]
+      expected_status: 200
+      required_keys:
+        - explanation
+        - sources
+      required_explanation_keys:
+        - predicted_issue
+        - confidence
+        - recommended_actions
+
+    - id: "INT-005"
+      name: "Engine echoes correct interface"
+      method: "GET"
+      url: "http://localhost:8000/predict"
+      params:
+        interface: "Branch3-Uplink"
+      expected:
+        interface: "Branch3-Uplink"
+
+    - id: "INT-006"
+      name: "Engine 404 for unknown route"
+      method: "GET"
+      url: "http://localhost:8000/nonexistent"
+      expected_status: 404
+
+    - id: "INT-007"
+      name: "Copilot 422 for invalid payload"
+      method: "POST"
+      url: "http://localhost:8001/copilot"
+      payload:
+        bad: "data"
+      expected_status: 422
+
+  # --- E2E SCENARIO TESTS ---
+  e2e_tests:
+    - id: "E2E-001"
+      name: "Healthy baseline"
+      description: "System reports low risk during normal conditions"
+      sim_mode: "healthy"
+      inject:
+        utilization: 46
+        latency: 21
+        jitter: 3
+        drops: 0
+        routing_flaps: 0
+      expected:
+        risk_score: "< 0.3"
+        utilization: "< 55"
+
+    - id: "E2E-002"
+      name: "Congestion injection"
+      description: "System detects elevated risk when metrics degrade"
+      sim_mode: "congestion"
+      inject:
+        utilization: 88
+        latency: 125
+        jitter: 15
+        drops: 4
+        routing_flaps: 2
+      expected:
+        risk_score: "> 0.3"
+        contributing_signals: "non-empty"
+
+    - id: "E2E-003"
+      name: "Copilot RAG-grounded recommendations"
+      description: "Copilot returns actionable advice sourced from runbooks"
+      input:
+        interface: "Branch3-Uplink"
+        risk_score: 0.9
+        time_to_impact: 3.0
+        contributing_signals:
+          - "utilization 88%"
+          - "latency 125ms"
+      expected:
+        min_actions: 1
+        min_sources: 1
+        source_contains_any: ["runbook", "incidents", "topology"]
+
+    - id: "E2E-004"
+      name: "Mitigation recovery"
+      description: "Risk drops after mitigation is applied"
+      sim_mode: "mitigated"
+      inject:
+        utilization: 45.5
+        latency: 19.5
+        jitter: 2.8
+        drops: 0
+        routing_flaps: 0
+      expected:
+        risk_score: "< 0.2"
+
+  # --- EDGE CASE TESTS ---
+  edge_case_tests:
+    - id: "EDGE-001"
+      name: "Empty metrics database"
+      description: "Predict with no data returns 0.0 risk"
+      precondition: "Clear all metrics"
+      expected:
+        risk_score: 0.0
+        status_code: 200
+
+    - id: "EDGE-002"
+      name: "Unknown interface"
+      description: "Predict for non-existent interface returns 0.0"
+      params:
+        interface: "NonExistent-Link"
+      expected:
+        risk_score: 0.0
+
+    - id: "EDGE-003"
+      name: "Single sample feature extraction"
+      description: "Feature extraction with only 1 data point (no crash)"
+      input:
+        samples: 1
+        utilization: 75.0
+      expected:
+        utilization_current: 75.0
+        utilization_slope: 0.0
+
+    - id: "EDGE-004"
+      name: "All-zero data"
+      description: "Feature extraction with zeroed metrics (no crash)"
+      input:
+        all_values: 0.0
+        samples: 30
+      expected:
+        utilization_current: 0.0
+        no_crash: true
+
+    - id: "EDGE-005"
+      name: "Empty RAG query"
+      description: "RAG retrieval with empty string query"
+      input:
+        query: ""
+        k: 2
+      expected:
+        returns_list: true
+        no_crash: true
+
+    - id: "EDGE-006"
+      name: "LLM fallback with empty signals"
+      description: "Fallback template works with no contributing signals"
+      input:
+        interface: "Branch3-Uplink"
+        risk_score: 0.5
+        time_to_impact: -1.0
+        contributing_signals: []
+      expected:
+        has_recommended_actions: true
+        min_actions: 1
+
+    - id: "EDGE-007"
+      name: "Extreme risk score (1.0)"
+      description: "Copilot handles maximum risk without error"
+      input:
+        risk_score: 1.0
+        time_to_impact: 0.0
+      expected:
+        status_code: 200
+
+    - id: "EDGE-008"
+      name: "Zero risk score (0.0)"
+      description: "Copilot handles minimum risk without timeout"
+      input:
+        risk_score: 0.0
+        time_to_impact: -1.0
+        contributing_signals: []
+      expected:
+        status_code: 200
+        max_response_time_ms: 10000
+
+  # --- STRESS TESTS ---
+  stress_tests:
+    - id: "STRESS-001"
+      name: "Rapid-fire /predict"
+      description: "20 concurrent GET requests to prediction engine"
+      endpoint: "GET /predict"
+      requests: 20
+      timeout_per_request_s: 3
+      expected:
+        zero_failures: true
+        max_avg_latency_ms: 500
+
+    - id: "STRESS-002"
+      name: "Rapid-fire /copilot"
+      description: "5 sequential POST requests to copilot API"
+      endpoint: "POST /copilot"
+      requests: 5
+      timeout_per_request_s: 10
+      expected:
+        zero_failures: true
+        max_avg_latency_ms: 10000
+
+    - id: "STRESS-003"
+      name: "Database write/read consistency"
+      description: "100 rapid inserts followed by count verification"
+      operations: 100
+      expected:
+        row_count: 100
+        consistency: true
+
+# ──────────────────────────────────────────────
+# QoS Traffic Control Policy
+# ──────────────────────────────────────────────
+traffic_policy:
+  peak_hours: "08:00-17:00"
+  off_peak_hours: "17:00-08:00"
+
+  classes:
+    - priority: 1
+      name: "VoIP & Video Conferencing"
+      dscp: "EF (46)"
+      bandwidth_guarantee: "15%"
+      peak_policy: "Always prioritized"
+
+    - priority: 2
+      name: "LMS (Moodle, Canvas)"
+      dscp: "AF31 (26)"
+      bandwidth_guarantee: "25%"
+      peak_policy: "Full priority"
+
+    - priority: 3
+      name: "Email, ERP, Cloud"
+      dscp: "AF21 (18)"
+      bandwidth_guarantee: "20%"
+      peak_policy: "Normal"
+
+    - priority: 4
+      name: "General Browsing"
+      dscp: "BE (0)"
+      bandwidth_guarantee: "20%"
+      peak_policy: "Best effort"
+
+    - priority: 5
+      name: "Streaming"
+      dscp: "BE (0)"
+      bandwidth_cap: "20%"
+      peak_policy: "480p limit, throttled"
+
+    - priority: "BLOCKED"
+      name: "Torrents, P2P, Gaming"
+      action: "DROP at firewall"
+
+  per_user_limits:
+    guaranteed_mbps: 2
+    burstable_mbps: 10
+    hard_cap_mbps: 25
+
+# ──────────────────────────────────────────────
+# Monitoring & Alerting Rules
+# ──────────────────────────────────────────────
+monitoring:
+  targets:
+    - interface: "Campus-WiFi-Uplink"
+      subnet: "10.50.0.0/22"
+      alert_on:
+        utilization_above: 85
+        latency_above_ms: 150
+      action: "Apply QoS rate-limiting on streaming class"
+
+    - interface: "Lab-HostOnly"
+      subnet: "192.168.56.0/24"
+      alert_on:
+        external_routing: true
+      action: "SECURITY ALERT — isolate and investigate"
+
+    - interface: "Wired-Campus-LAN"
+      domain: "domain.name"
+      alert_on:
+        auth_failures_per_min: 5
+      action: "Lock port, notify IT security"
+
+# ──────────────────────────────────────────────
+# Run Instructions
+# ──────────────────────────────────────────────
+run_instructions:
+  local:
+    start: |
+      cd /home/kali01/Documents/agent
+      ./noc-copilot/run.sh
+    test_all: |
+      cd /home/kali01/Documents/agent
+      PYTHONPATH=$(pwd)/noc-copilot venv/bin/python3 noc-copilot/test_master.py
+    inject_fault: |
+      cd /home/kali01/Documents/agent
+      PYTHONPATH=$(pwd)/noc-copilot venv/bin/python3 noc-copilot/faultsim/inject_fault.py congestion
+    dashboard_url: "http://localhost:8501"
+
+  ci_cd:
+    platform: "GitHub Actions"
+    workflow: ".github/workflows/test.yml"
+    trigger: "push to main or develop"

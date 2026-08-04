@@ -1,0 +1,6 @@
+Network Topology Notes:
+- Branch3 (approx 40 users) connects to Head Office (Hub) and Data Centre 1 (DC1) via two paths:
+  1. Primary MPLS Link: Direct private link between Branch3 and DC1. This is the main path for high-priority traffic like VoIP and CRM.
+  2. Backup SD-WAN Link: IPsec VPN tunnel over public broadband (tunnel interface broadband-tunnel-01). This link acts as a backup path.
+- VoIP and CRM traffic are marked with DSCP EF (Expedited Forwarding) and AF21 respectively. Bulk data transfer uses the default best-effort class.
+- The BGP next-hop for the primary route to DC1 is 10.0.3.1. The backup tunnel BGP next-hop is 192.168.30.2.

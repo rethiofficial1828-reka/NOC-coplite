@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+.venv/
+
+# Data files (generated at runtime)
+data/telemetry.db
+data/*.csv
+*.pkl
+
+# Model artifacts (generated during training)
+engine/*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+/tmp/
+
+# Streamlit cache
+.streamlit/cache/

@@ -1,0 +1,162 @@
+================================================================================
+  COLLEGE NETWORK TOPOLOGY — Traffic Control Reference
+  Generated from live host reconnaissance (Windows 10 Build 26200)
+================================================================================
+
+NETWORK SEGMENTS
+================
+
+1. CAMPUS WI-FI NETWORK (Primary)
+   ├── Subnet:          10.50.0.0/22  (1022 usable hosts)
+   ├── Subnet Mask:     255.255.252.0
+   ├── Default Gateway:  10.50.0.1
+   ├── Host IP:         10.50.0.231
+   ├── IPv6 Link-Local: fe80::ca64:d07:a2a4:8146%11
+   ├── Interface:       Wi-Fi (Wireless LAN)
+   ├── VLAN Purpose:    Student/faculty wireless — internet access, LMS,
+   │                    cloud apps, streaming, general browsing
+   └── Traffic Classes:
+       ├── HIGH:   LMS (Moodle/Canvas), email, ERP portals
+       ├── MEDIUM: Web browsing, cloud storage (OneDrive, Drive)
+       ├── LOW:    Social media, YouTube, streaming
+       └── BLOCK:  Torrents, P2P, gaming (optional policy)
+
+2. VIRTUALBOX HOST-ONLY NETWORK (Lab/Security)
+   ├── Subnet:          192.168.56.0/24  (254 usable hosts)
+   ├── Subnet Mask:     255.255.255.0
+   ├── Default Gateway:  None (isolated)
+   ├── Host IP:         192.168.56.1  (VirtualBox Host Adapter)
+   ├── IPv6 Link-Local: fe80::8543:d8e4:54f2:876d%3
+   ├── Interface:       Ethernet 2 (VirtualBox Host-Only)
+   ├── VLAN Purpose:    Isolated lab environment — penetration testing,
+   │                    security training, VM-to-host communication
+   └── Traffic Classes:
+       ├── INTERNAL ONLY: VM ↔ Host communication
+       ├── NO INTERNET:   Air-gapped by design
+       └── TOOLS:         Kali Linux, Metasploit, Wireshark labs
+
+3. WIRED ETHERNET (Campus LAN — Currently Disconnected)
+   ├── Subnet:          Unknown (media disconnected)
+   ├── DNS Suffix:      domain.name  (college Active Directory domain)
+   ├── Interface:       Ethernet (RJ45)
+   ├── VLAN Purpose:    Wired campus LAN — likely faculty/lab desktops,
+   │                    printers, domain-joined machines
+   └── Notes:           Cable unplugged or port disabled. When connected,
+                        this is likely on a separate VLAN from Wi-Fi.
+
+
+TOPOLOGY DIAGRAM
+================
+
+    ┌──────────────────────────────────────────────────────┐
+    │                   INTERNET (ISP)                     │
+    └──────────────────────┬───────────────────────────────┘
+                           │
+                    ┌──────┴──────┐
+                    │  COLLEGE    │
+                    │  FIREWALL   │
+                    │  (Gateway)  │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────────┐
+              │            │                │
+     ┌────────┴───┐  ┌─────┴──────┐  ┌──────┴───────┐
+     │  CORE      │  │  CAMPUS    │  │  SERVER      │
+     │  SWITCH    │  │  WIRELESS  │  │  FARM/DC     │
+     │  (L3)      │  │  CONTROLLER│  │  (LMS, ERP)  │
+     └─────┬──────┘  └─────┬──────┘  └──────────────┘
+           │               │
+     ┌─────┴──────┐   ┌────┴────────────────────────┐
+     │  VLAN 10   │   │  CAMPUS WI-FI (10.50.0.0/22)│
+     │  Wired LAN │   │  Gateway: 10.50.0.1         │
+     │  (domain.  │   │  ~1022 hosts                 │
+     │   name)    │   │                              │
+     │  [DISCON]  │   │  ┌──────────────────────┐    │
+     └────────────┘   │  │ YOUR PC: 10.50.0.231 │    │
+                      │  └──────────┬───────────┘    │
+                      └─────────────│────────────────┘
+                                    │
+                          ┌─────────┴──────────┐
+                          │  VIRTUALBOX BRIDGE  │
+                          │  Host-Only Network  │
+                          │  192.168.56.0/24    │
+                          │  [AIR-GAPPED]       │
+                          │                     │
+                          │  ┌───────────────┐  │
+                          │  │ Kali VM       │  │
+                          │  │ 192.168.56.x  │  │
+                          │  └───────────────┘  │
+                          └─────────────────────┘
+
+
+TRAFFIC CONTROL POLICY
+=======================
+
+ZONE 1: CAMPUS WI-FI (10.50.0.0/22)
+────────────────────────────────────
+  Priority 1 (DSCP EF/46)  — VoIP, video conferencing (Zoom, Teams)
+  Priority 2 (DSCP AF31)   — LMS platforms (Moodle, Canvas, Blackboard)
+  Priority 3 (DSCP AF21)   — College ERP, email, cloud productivity
+  Priority 4 (DSCP 0/BE)   — General web browsing
+  Priority 5 (Rate-Limited) — Streaming (YouTube, Netflix) — cap at 20% BW
+  BLOCKED                  — Torrents (BitTorrent ports), P2P file sharing
+
+  Bandwidth Allocation (per user):
+    ├── Guaranteed:  2 Mbps (LMS + email)
+    ├── Burstable:   10 Mbps (general browsing)
+    └── Hard Cap:    25 Mbps (prevents single-user saturation)
+
+  Peak Hours Policy (08:00 – 17:00):
+    ├── Streaming throttled to 480p (save bandwidth for academic use)
+    ├── Large downloads queued (defer to off-peak)
+    └── Gaming traffic deprioritized
+
+  Off-Peak Policy (17:00 – 08:00):
+    ├── All limits relaxed
+    └── Streaming at full resolution allowed
+
+ZONE 2: LAB NETWORK (192.168.56.0/24)
+──────────────────────────────────────
+  Policy: ISOLATED — no internet routing
+  Purpose: Security labs, penetration testing, malware analysis
+  Control: VirtualBox internal networking only
+  Monitoring: Host-based (Wireshark on host adapter)
+
+ZONE 3: WIRED LAN (domain.name VLAN — currently offline)
+─────────────────────────────────────────────────────────
+  Policy: Domain-authenticated access only
+  Purpose: Faculty workstations, printers, lab PCs
+  Control: 802.1X port authentication
+  Bandwidth: Unmetered within campus backbone
+
+
+INTERFACE SUMMARY TABLE
+========================
+
+  Interface         IP Address       Subnet          Gateway       Status    Zone
+  ───────────────── ──────────────── ─────────────── ───────────── ───────── ──────
+  Wi-Fi             10.50.0.231      10.50.0.0/22    10.50.0.1     ACTIVE    Zone 1
+  Ethernet 2 (VBox) 192.168.56.1     192.168.56.0/24 None          ACTIVE    Zone 2
+  Ethernet (Wired)  —                —               —             DOWN      Zone 3
+  WLAN LAN* 1       —                —               —             DOWN      —
+  WLAN LAN* 2       —                —               —             DOWN      —
+
+
+MONITORING TARGETS
+==================
+  For the NOC Copilot predictive engine, monitor these interfaces:
+
+  1. Campus-WiFi-Uplink   (10.50.0.0/22 gateway: 10.50.0.1)
+     ├── Metrics: utilization, latency, jitter, packet drops
+     ├── Threshold: utilization > 85% triggers congestion alert
+     └── Action:  Apply QoS rate-limiting on streaming class
+
+  2. Lab-HostOnly          (192.168.56.0/24)
+     ├── Metrics: internal traffic volume only
+     ├── Threshold: any external routing = SECURITY ALERT
+     └── Action:  Isolate and investigate
+
+  3. Wired-Campus-LAN      (domain.name VLAN)
+     ├── Metrics: port status, 802.1X auth failures
+     ├── Threshold: > 5 auth failures/min = brute force alert
+     └── Action:  Lock port, notify IT security
