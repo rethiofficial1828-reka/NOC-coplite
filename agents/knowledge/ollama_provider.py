@@ -44,6 +44,7 @@ class OllamaProvider(LLMProvider):
         retry_count: Optional[int] = None,
         event_bus: Optional[EventBus] = None,
         config_manager: Optional[ConfigManager] = None,
+        runtime_service: Optional[Any] = None,
     ) -> None:
         """
         Initialize OllamaProvider.
@@ -55,9 +56,11 @@ class OllamaProvider(LLMProvider):
             retry_count: Optional maximum number of retry attempts.
             event_bus: Optional EventBus instance for provider lifecycle events.
             config_manager: Optional ConfigManager instance.
+            runtime_service: Optional RuntimeService instance for capability inspection.
         """
         self._config = config_manager or ConfigManager.get_instance()
         self._event_bus = event_bus or EventBus.get_global()
+        self._runtime_service = runtime_service
         self._lock = threading.RLock()
         self._is_initialized = False
 

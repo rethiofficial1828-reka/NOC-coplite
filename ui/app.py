@@ -553,7 +553,32 @@ with col_info:
             </div>
         </div>""", unsafe_allow_html=True)
 
-    # 3. Simulation Control Panel
+    # 3. AI Runtime & Hardware Acceleration Panel
+    st.write("")
+    st.subheader("AI Runtime & Hardware Acceleration Status")
+    try:
+        from agents.runtime import RuntimeService
+        r_service = RuntimeService()
+        caps = r_service.get_capabilities()
+
+        col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+        with col_r1:
+            st.metric("OS / Environment", f"{caps.operating_system.value}", f"{caps.virtualization_environment.value}")
+        with col_r2:
+            gpu_display = f"{caps.gpu_name}" if caps.is_guest_gpu_exposed else "Not Exposed to Guest"
+            st.metric("GPU Device", caps.gpu_vendor.value, gpu_display)
+        with col_r3:
+            st.metric("Inference Backend", caps.selected_backend.value, f"Ollama: {caps.ollama_location.value}")
+        with col_r4:
+            health_color = "🟢" if caps.runtime_health.value == "READY" else ("🟡" if caps.runtime_health.value == "DEGRADED" else "🔴")
+            st.metric("Runtime Health", f"{health_color} {caps.runtime_health.value}", caps.qwen_model)
+
+        if caps.degradation_reason:
+            st.info(f"ℹ️ **Runtime Diagnostic Rationale**: {caps.degradation_reason}")
+    except Exception as e:
+        st.warning(f"Runtime capability detection active: {e}")
+
+    # 4. Simulation Control Panel
     st.write("")
     st.subheader("Simulation Control Panel")
 
@@ -579,3 +604,4 @@ with col_info:
 # ---------------------------------------------------------------------------
 time.sleep(2)
 st.rerun()
+
