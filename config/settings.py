@@ -19,6 +19,16 @@ ENGINE_PORT = 8000
 COPILOT_PORT = 8001
 STREAMLIT_PORT = 8501
 
+# LLM Provider Configuration Defaults
+LLM_PROVIDER_TYPE = "ollama"
+OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+OLLAMA_MODEL = "qwen3:1.7b"
+OLLAMA_TIMEOUT_SEC = 300.0
+OLLAMA_RETRY_COUNT = 3
+OLLAMA_TEMPERATURE = 0.2
+OLLAMA_TOP_P = 0.9
+OLLAMA_MAX_TOKENS = 2048
+
 # ---------------------------------------------------------------------------
 # Device Registry — single source of truth for all monitored network nodes.
 # The "name" field is used as the interface key in the telemetry database.

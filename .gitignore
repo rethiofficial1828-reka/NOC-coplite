@@ -12,8 +12,10 @@ venv/
 
 # Data files (generated at runtime)
 data/telemetry.db
+data/*.db
 data/*.csv
 *.pkl
+*.tar.zst
 
 # Model artifacts (generated during training)
 engine/*.json
