@@ -16,6 +16,7 @@ from agents.runtime.runtime_agent import RuntimeAgent
 from agents.runtime.runtime_health import RuntimeHealthEvaluator
 from agents.runtime.runtime_models import (
     CapabilityStatus,
+    GPUCapability,
     GPUInfo,
     GPUVendor,
     InferenceBackend,
@@ -29,6 +30,7 @@ from agents.runtime.runtime_models import (
     VirtualizationEnvironment,
 )
 from agents.runtime.runtime_service import RuntimeService
+from agents.runtime.startup_health import HealthCheckItem, StartupHealthReport, StartupHealthService
 
 __all__ = [
     "CapabilityManager",
@@ -40,7 +42,11 @@ __all__ = [
     "RuntimeAgent",
     "RuntimeHealthEvaluator",
     "RuntimeService",
+    "HealthCheckItem",
+    "StartupHealthReport",
+    "StartupHealthService",
     "CapabilityStatus",
+    "GPUCapability",
     "GPUInfo",
     "GPUVendor",
     "InferenceBackend",

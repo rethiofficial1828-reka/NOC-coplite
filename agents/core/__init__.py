@@ -18,6 +18,8 @@ from agents.core.logger import (
     log_execution_event,
 )
 
+from agents.core.operational_metrics import OperationalMetrics
+
 __all__ = [
     "AgentError",
     "RegistrationError",
@@ -30,4 +32,5 @@ __all__ = [
     "get_agent_logger",
     "log_execution_event",
     "ServiceContainer",
+    "OperationalMetrics",
 ]

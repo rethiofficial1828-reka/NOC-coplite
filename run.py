@@ -36,37 +36,10 @@ def print_banner():
 
 
 def run_diagnostics() -> bool:
-    """Perform runtime hardware & LLM backend diagnostics."""
-    print("\n🔍 Inspecting Host Runtime Environment & Acceleration Capabilities...")
-    service = RuntimeService()
-    caps = service.get_capabilities(force_refresh=True)
-
-    print(f"\n[OS Platform]          : {caps.operating_system.value} ({caps.architecture})")
-    print(f"[Python Version]       : {caps.python_version}")
-    print(f"[Virtualization]       : {caps.virtualization_environment.value}")
-    print(f"[System CPU Cores]     : {caps.cpu_count}")
-    print(f"[System Memory]        : {caps.total_memory_gb:.1f} GB Total / {caps.available_memory_gb:.1f} GB Available")
-    
-    print(f"\n[GPU Hardware]         : {caps.gpu_vendor.value} - {caps.gpu_name}")
-    print(f"[GPU Status]           : {caps.gpu_status.value}")
-    print(f"[Guest GPU Exposure]   : {'Exposed to Guest' if caps.is_guest_gpu_exposed else 'NOT EXPOSED TO GUEST'}")
-    if caps.gpu_memory_mb > 0:
-        print(f"[VRAM Memory]          : {caps.gpu_memory_mb:.0f} MB")
-        print(f"[Driver Version]       : {caps.gpu_driver_version}")
-
-    print(f"\n[Ollama Endpoint]      : {caps.ollama_endpoint}")
-    print(f"[Ollama Location]      : {caps.ollama_location.value}")
-    print(f"[Ollama Status]        : {'ONLINE (' + caps.ollama_version + ')' if caps.ollama_available else 'OFFLINE'}")
-    print(f"[Primary Model]        : {caps.qwen_model} -> {'AVAILABLE' if caps.qwen_available else 'MISSING'}")
-
-    print(f"\n[Selected Backend]     : {caps.selected_backend.value}")
-    print(f"[Runtime Health]       : {caps.runtime_health.value}")
-
-    if caps.degradation_reason:
-        print(f"\n⚠️ Degradation Rationale : {caps.degradation_reason}")
-
-    print("-" * 65)
-    return caps.runtime_health != RuntimeHealth.UNAVAILABLE
+    """Perform runtime hardware, database, and LLM backend diagnostics."""
+    from agents.runtime.startup_health import StartupHealthService
+    health_svc = StartupHealthService()
+    return health_svc.print_startup_report()
 
 
 def start_services():

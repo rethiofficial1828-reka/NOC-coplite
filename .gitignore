@@ -10,12 +10,21 @@ build/
 venv/
 .venv/
 
+# Environment variables & secrets
+.env
+.env.*
+*.pem
+*.key
+
 # Data files (generated at runtime)
 data/telemetry.db
 data/*.db
 data/*.csv
+data/federated_bundles/
+data/federated_knowledge_index.json
 *.pkl
 *.tar.zst
+*.nockb
 
 # Model artifacts (generated during training)
 engine/*.json
@@ -24,15 +33,22 @@ engine/*.json
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE & Editor Scratch
 .vscode/
 .idea/
 *.swp
 *.swo
+Untitled*
 
-# Logs
+# Logs & Temp
 *.log
+*.tmp
 /tmp/
+data/*_RESULTS.txt
+data/*_VERIFICATION.txt
+data/*_matrix.txt
+data/*_summary.txt
+data/*_results.json
 
 # Streamlit cache
 .streamlit/cache/

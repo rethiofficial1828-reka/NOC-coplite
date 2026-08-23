@@ -1,13 +1,24 @@
 # 🌐 Air-Gapped Predictive NOC Copilot
 
-An AI-powered Network Operations Center copilot that predicts network failures before they happen and provides RAG-grounded remediation guidance — fully air-gapped, zero cloud dependencies.
+An AI-powered Network Operations Center copilot that predicts network failures before they happen and provides evidence-grounded remediation, controlled failover, and air-gapped federated intelligence — fully air-gapped, zero cloud dependencies.
 
+![Version](https://img.shields.io/badge/Version-v1.0.0--rc1-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![XGBoost](https://img.shields.io/badge/ML-XGBoost-orange)
-![FastAPI](https://img.shields.io/badge/API-FastAPI-green)
-![Tests](https://img.shields.io/badge/Tests-31%20Passing-brightgreen)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-red)
+![Tests](https://img.shields.io/badge/Tests-19%2C280%20Passing-brightgreen)
+![Stress](https://img.shields.io/badge/Stress-100k%20Passed-success)
 
-## 🏗️ Architecture
+## 📚 Productization Documentation
+
+- 📋 [PRODUCT_INVENTORY.md](file:///home/kali/Downloads/NOC-coplite/PRODUCT_INVENTORY.md) — Comprehensive inventory of all 18 Atomic Agents, services, and UI panels.
+- 🎯 [PRODUCT_DEMO_GUIDE.md](file:///home/kali/Downloads/NOC-coplite/PRODUCT_DEMO_GUIDE.md) — Step-by-step demonstration walkthrough for operators and executive reviewers.
+- 🧪 [NETWORK_LAB_GUIDE.md](file:///home/kali/Downloads/NOC-coplite/NETWORK_LAB_GUIDE.md) — Technical guide for executing and customizing network lab simulation scenarios.
+- 🏗️ [ARCHITECTURE.md](file:///home/kali/Downloads/NOC-coplite/ARCHITECTURE.md) — System architecture specification (Atomic Agents, Structured memory, RAG/CAG).
+- 🚀 [DEPLOYMENT_GUIDE.md](file:///home/kali/Downloads/NOC-coplite/DEPLOYMENT_GUIDE.md) — Production deployment, VirtualBox NAT networking setup, and system verification instructions.
+- 📊 [PRODUCTIZATION_VALIDATION_REPORT.md](file:///home/kali/Downloads/NOC-coplite/PRODUCTIZATION_VALIDATION_REPORT.md) — Final validation report and operational readiness status.
+
+## 🏗️ Architecture Overview
 
 ```
 ┌─────────────────┐      ┌──────────────────┐       ┌─────────────────┐
@@ -31,20 +42,70 @@ An AI-powered Network Operations Center copilot that predicts network failures b
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install dependencies
+# 2. Install dependencies (including PyYAML)
 pip install -r requirements.txt
 
-# 3. Launch all services
-./run.sh
+# 3. Verify runtime health & diagnostics
+PYTHONPATH=. ./venv/bin/python3 run.py --check-only
 
-# 4. Open dashboard
+# 4. Launch all services with the unified starter
+./scripts/start_noc_copilot.sh
+
+# 5. Open dashboard
 # http://localhost:8501
 ```
 
 ## 📂 Project Structure
 
 ```
-noc-copilot/
+├── agents/
+│   ├── federated_intelligence/ # Sprint 20 Air-Gapped Federated Incident Intelligence & Signed Knowledge Exchange
+│   │   ├── federated_models.py       # Pydantic V2 Domain Models & Enums
+│   │   ├── privacy_sanitizer.py     # PrivacySanitizer (Deterministic PII Scrubbing)
+│   │   ├── crypto_signer.py         # CryptoSigner (HMAC/RSA Signatures)
+│   │   ├── bundle_exporter.py       # BundleExporter (Offline JSON Bundles)
+│   │   ├── bundle_importer.py       # BundleImporter (Verification Gates)
+│   │   ├── federated_knowledge_base.py # FederatedKnowledgeBaseManager (RAG Indexing)
+│   │   ├── federated_intelligence_service.py # FederatedIntelligenceService
+│   │   └── federated_intelligence_agent.py   # FederatedIntelligenceAgent
+│   ├── adaptive_failover/ # Sprint 19 Adaptive Multi-Provider Failover & Stability Intelligence
+│   │   ├── adaptive_models.py       # Pydantic V2 Domain Models & Enums
+│   │   ├── provider_monitor.py      # ProviderMonitor (Trend Tracking)
+│   │   ├── degradation_detector.py # DegradationDetector (Multi-Signal Correlation)
+│   │   ├── stability_engine.py      # StabilityEngine (Hysteresis & Flap Prevention)
+│   │   ├── adaptive_path_scoring.py # AdaptivePathScoringEngine (Temporal Scoring)
+│   │   ├── failover_trigger.py      # FailoverTriggerEngine
+│   │   ├── continuous_verifier.py   # ContinuousVerificationEngine
+│   │   ├── failback_engine.py       # FailbackEngine (Recovery Stability Window)
+│   │   ├── transition_manager.py    # NetworkTransitionManager (State Machine)
+│   │   ├── transition_memory.py     # TransitionMemory (Historical Evidence)
+│   │   ├── adaptive_failover_service.py # AdaptiveFailoverService
+│   │   └── adaptive_failover_agent.py   # AdaptiveFailoverAgent
+│   ├── failover/        # Sprint 18 Controlled Failover Execution & Verification Engine
+│   │   ├── failover_models.py       # Pydantic V2 Domain Models & Enums
+│   │   ├── approval_manager.py      # ApprovalManager (Hash-Bound & Anti-Replay)
+│   │   ├── pre_execution_validator.py # PreExecutionValidator (16 Prechecks)
+│   │   ├── execution_adapter.py     # IExecutionAdapter Interface
+│   │   ├── dry_run_adapter.py       # DryRunExecutionAdapter
+│   │   ├── authorized_execution_adapter.py # AuthorizedNetworkAdapter
+│   │   ├── post_execution_verifier.py # PostExecutionVerifier (Closed-Loop)
+│   │   ├── rollback_engine.py       # RollbackEngine (Restoration Verification)
+│   │   ├── failover_service.py      # FailoverService
+│   │   └── failover_agent.py        # FailoverAgent
+│   ├── path_decision/   # Sprint 17 Path & Provider Decision Engine
+│   │   ├── path_discovery.py        # PathDiscoveryEngine
+│   │   ├── provider_health.py       # ProviderHealthEngine
+│   │   ├── path_evaluator.py        # PathEvaluationEngine
+│   │   ├── economics_engine.py      # NetworkEconomicsEngine
+│   │   ├── path_scoring.py          # PathScoringEngine
+│   │   ├── path_simulator.py        # PathSimulationEngine
+│   │   ├── recommendation_engine.py  # FailoverRecommendationEngine
+│   │   ├── decision_service.py      # PathDecisionService
+│   │   └── path_decision_agent.py   # PathDecisionAgent
+│   ├── reasoning/       # Enterprise Reasoning Subsystem
+│   ├── trust/           # Trust, Verification & Safe Autonomy
+│   ├── premortem/       # Pre-Mortem Forecasting Engine
+│   └── runtime/         # Cross-Platform AI Hardware Acceleration
 ├── engine/              # Predictive ML Engine
 │   ├── api.py           # FastAPI server (port 8000)
 │   ├── features.py      # Rolling-window feature extraction
@@ -59,9 +120,12 @@ noc-copilot/
 │   └── inject_fault.py      # Live fault injection daemon
 ├── ui/
 │   └── app.py           # Streamlit dashboard
+├── tests/
+│   ├── test_path_decision.py  # 40 Sprint 17 Path Decision tests
+│   └── ...
 ├── .github/workflows/
 │   └── test.yml         # CI/CD pipeline
-├── test_master.py       # Master test runner (31 tests)
+├── test_master.py       # Master test runner
 ├── test_config.yml      # Test scenarios in YAML
 ├── topology_map.html    # Visual network topology
 ├── requirements.txt     # Python dependencies

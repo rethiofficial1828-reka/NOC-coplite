@@ -16,7 +16,39 @@ topology:
       image: frrouting/frr:latest
       mgmt-ipv4: 172.20.20.11
 
+    core-01:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.12
+
+    fw-01:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.13
+
+    rtr-01:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.14
+
+    branch3-uplink:
+      kind: linux
+      image: frrouting/frr:latest
+      mgmt-ipv4: 172.20.20.15
+
   links:
     - endpoints:
         - "hub:eth1"
         - "branch1:eth1"
+    - endpoints:
+        - "core-01:eth1"
+        - "fw-01:eth1"
+    - endpoints:
+        - "fw-01:eth2"
+        - "rtr-01:eth1"
+    - endpoints:
+        - "rtr-01:eth2"
+        - "branch3-uplink:eth1"
+    - endpoints:
+        - "branch3-uplink:eth2"
+        - "hub:eth2"

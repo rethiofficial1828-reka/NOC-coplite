@@ -5,7 +5,7 @@ Specifically verifies availability of the required primary model (qwen3:1.7b).
 Enforces zero silent substitution rules.
 """
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from agents.runtime.ollama_detector import OllamaDetector
 from config.settings import OLLAMA_MODEL
@@ -16,8 +16,8 @@ class ModelDetector:
     Detector verifying required primary LLM model registration.
     """
 
-    def __init__(self, ollama_detector: OllamaDetector) -> None:
-        self._ollama_detector = ollama_detector
+    def __init__(self, ollama_detector: Optional[OllamaDetector] = None) -> None:
+        self._ollama_detector = ollama_detector or OllamaDetector()
 
     def verify_primary_model(self, endpoint_url: str) -> Tuple[bool, str]:
         """

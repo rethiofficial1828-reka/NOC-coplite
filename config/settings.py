@@ -3,6 +3,9 @@ import os
 # Project root directory (parent directory of config package)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+VERSION = "1.0.0-rc1"
+__version__ = VERSION
+
 # Key directories
 DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 DOCS_DIR = os.path.join(PROJECT_ROOT, "copilot", "docs")

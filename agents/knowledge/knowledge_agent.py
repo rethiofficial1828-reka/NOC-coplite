@@ -188,17 +188,24 @@ class KnowledgeAgent(BaseAgent):
         super().shutdown()
 
 
-def register_knowledge_agent(registry: Optional[AgentRegistry] = None) -> KnowledgeAgent:
+def register_knowledge_agent(
+    registry: Optional[AgentRegistry] = None,
+    service: Optional[KnowledgeService] = None,
+) -> KnowledgeAgent:
     """
     Convenience function to instantiate and register KnowledgeAgent with AgentRegistry.
 
     Args:
         registry: Target AgentRegistry (defaults to global instance).
+        service: Optional pre-configured KnowledgeService instance.  When supplied,
+                 it is injected directly into KnowledgeAgent, bypassing ProviderFactory.
+                 When omitted (None), KnowledgeAgent constructs a default KnowledgeService
+                 via ProviderFactory exactly as before — zero-arg callers are unaffected.
 
     Returns:
         Registered KnowledgeAgent instance.
     """
     target_registry = registry or AgentRegistry.get_global()
-    agent = KnowledgeAgent()
+    agent = KnowledgeAgent(service=service)
     target_registry.register(agent, allow_override=True)
     return agent

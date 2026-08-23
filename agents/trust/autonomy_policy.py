@@ -66,12 +66,7 @@ class AutonomyPolicyEngine:
                 logger.info("Policy Decision: BLOCKED (Adversarial challenge disproved hypothesis)")
                 return AutonomyDecision.BLOCKED
 
-            # Rule 2: Low Trust / Insufficient Evidence -> ADDITIONAL_EVIDENCE_REQUIRED
-            if trust_score.overall_trust_score < 0.60 or verification_status == VerificationStatus.INSUFFICIENT_EVIDENCE:
-                logger.info("Policy Decision: ADDITIONAL_EVIDENCE_REQUIRED (Trust score below 0.60)")
-                return AutonomyDecision.ADDITIONAL_EVIDENCE_REQUIRED
-
-            # Rule 3: High / Critical Blast Radius -> HUMAN_APPROVAL_REQUIRED
+            # Rule 2: High / Critical Blast Radius -> HUMAN_APPROVAL_REQUIRED
             level_rank = {BlastRadiusLevel.LOW: 1, BlastRadiusLevel.MEDIUM: 2, BlastRadiusLevel.HIGH: 3, BlastRadiusLevel.CRITICAL: 4}
             if level_rank[blast_radius.potential_action_level] > level_rank[p.max_blast_radius]:
                 logger.info(
@@ -80,7 +75,7 @@ class AutonomyPolicyEngine:
                 )
                 return AutonomyDecision.HUMAN_APPROVAL_REQUIRED
 
-            # Rule 4: Reversibility & Rollback Policy Requirements
+            # Rule 3: Reversibility & Rollback Policy Requirements
             if p.require_reversibility and not is_reversible:
                 logger.info("Policy Decision: HUMAN_APPROVAL_REQUIRED (Action is non-reversible)")
                 return AutonomyDecision.HUMAN_APPROVAL_REQUIRED
@@ -89,10 +84,15 @@ class AutonomyPolicyEngine:
                 logger.info("Policy Decision: HUMAN_APPROVAL_REQUIRED (No rollback plan available)")
                 return AutonomyDecision.HUMAN_APPROVAL_REQUIRED
 
-            # Rule 5: Auto-Execution Disabled globally -> HUMAN_APPROVAL_REQUIRED
+            # Rule 4: Auto-Execution Disabled globally -> HUMAN_APPROVAL_REQUIRED
             if not p.allow_auto_execution:
                 logger.info("Policy Decision: HUMAN_APPROVAL_REQUIRED (Global auto-execution disabled)")
                 return AutonomyDecision.HUMAN_APPROVAL_REQUIRED
+
+            # Rule 5: Low Trust / Insufficient Evidence -> ADDITIONAL_EVIDENCE_REQUIRED
+            if trust_score.overall_trust_score < 0.60 or verification_status == VerificationStatus.INSUFFICIENT_EVIDENCE:
+                logger.info("Policy Decision: ADDITIONAL_EVIDENCE_REQUIRED (Trust score below 0.60)")
+                return AutonomyDecision.ADDITIONAL_EVIDENCE_REQUIRED
 
             # Rule 6: High Trust + Low Blast Radius + Reversible -> AUTO_ELIGIBLE
             if trust_score.overall_trust_score >= p.min_trust_score and blast_radius.potential_action_level == BlastRadiusLevel.LOW:

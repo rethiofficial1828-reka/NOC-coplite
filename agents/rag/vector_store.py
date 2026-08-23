@@ -5,6 +5,7 @@ Implements SQLiteVectorStore — a production-grade, thread-safe persistent vect
 and NumPy for vector similarity calculations and metadata filtering.
 """
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -47,10 +48,15 @@ class SQLiteVectorStore(IVectorStore):
         os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
         self._ensure_schema()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _get_connection(self):
         conn = sqlite3.connect(self._db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _ensure_schema(self) -> None:
         with self._lock:

@@ -221,7 +221,7 @@ class TestKnowledgeAgentFramework(unittest.TestCase):
         rec_agent._event_bus = bus
         rec_agent._setup_event_subscriptions()
 
-        know_agent = register_knowledge_agent(registry=self.registry)
+        know_agent = register_knowledge_agent(registry=self.registry, service=self.service)
         know_agent._event_bus = bus
         know_agent._setup_event_subscription()
 

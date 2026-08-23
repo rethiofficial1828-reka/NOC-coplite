@@ -52,7 +52,8 @@ class TelemetryRepository:
     def _ensure_db_initialized(self) -> None:
         """Ensure metrics table schema exists."""
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS metrics (
@@ -66,6 +67,8 @@ class TelemetryRepository:
                     )
                 """)
                 conn.commit()
+            finally:
+                conn.close()
         except Exception as e:
             logger.error(f"Failed to initialize telemetry database table: {e}", exc_info=True)
             raise ExecutionError(f"Failed to initialize telemetry table: {e}") from e
@@ -88,13 +91,16 @@ class TelemetryRepository:
             LIMIT 1
         """
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query, (interface,))
                 row = cursor.fetchone()
                 if row:
                     return dict(row)
                 return None
+            finally:
+                conn.close()
         except sqlite3.Error as e:
             logger.error(f"Error querying latest telemetry for interface '{interface}': {e}", exc_info=True)
             raise ExecutionError(f"Database query error for interface '{interface}': {e}") from e
@@ -116,11 +122,14 @@ class TelemetryRepository:
             ) latest ON m.interface = latest.interface AND m.timestamp = latest.max_ts
         """
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query)
                 rows = cursor.fetchall()
                 return [dict(r) for r in rows]
+            finally:
+                conn.close()
         except sqlite3.Error as e:
             logger.error(f"Error querying all latest telemetry records: {e}", exc_info=True)
             raise ExecutionError(f"Database query error fetching all latest telemetry: {e}") from e
@@ -148,11 +157,14 @@ class TelemetryRepository:
             ORDER BY timestamp ASC
         """
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query, (interface, max(1, limit)))
                 rows = cursor.fetchall()
                 return [dict(r) for r in rows]
+            finally:
+                conn.close()
         except sqlite3.Error as e:
             logger.error(f"Error querying historical telemetry for '{interface}': {e}", exc_info=True)
             raise ExecutionError(f"Database query error fetching historical telemetry for '{interface}': {e}") from e
@@ -190,11 +202,14 @@ class TelemetryRepository:
             LIMIT ? OFFSET ?
         """
         try:
-            with self._get_connection() as conn:
+            conn = self._get_connection()
+            try:
                 cursor = conn.cursor()
                 cursor.execute(query, (interface, start_time, end_time, max(1, limit), max(0, offset)))
                 rows = cursor.fetchall()
                 return [dict(r) for r in rows]
+            finally:
+                conn.close()
         except sqlite3.Error as e:
             logger.error(
                 f"Error querying telemetry range for '{interface}' ({start_time}-{end_time}): {e}",

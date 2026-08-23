@@ -115,3 +115,26 @@ class ServiceContainer:
             self._instances.clear()
             self._factories.clear()
             self._singletons.clear()
+
+    # ------------------------------------------------------------------
+    # Compatibility aliases for key-value / type resolution
+    # ------------------------------------------------------------------
+
+    def register(self, key: Any, value: Any) -> None:
+        """Register a service instance by key or type (overwriting if key exists)."""
+        with self._lock:
+            self._instances[key] = value
+
+    def get(self, key: Any, default: Any = None) -> Any:
+        """Retrieve registered service instance or return default if missing."""
+        with self._lock:
+            if self.has_service(key):
+                try:
+                    return self.resolve(key)
+                except Exception:
+                    return default
+            return default
+
+    def clear(self) -> None:
+        """Clear all service registrations (alias for reset)."""
+        self.reset()

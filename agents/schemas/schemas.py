@@ -150,7 +150,9 @@ class ExecutionContext(BaseModel):
     """Execution context passed across workflow execution steps."""
 
     context_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    execution_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     parameters: Dict[str, Any] = Field(default_factory=dict)
+    payload: Dict[str, Any] = Field(default_factory=dict)
     results: Dict[str, Any] = Field(default_factory=dict)
     shared_state: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

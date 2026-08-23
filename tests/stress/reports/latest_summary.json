@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-08-23T12:03:03.227482+00:00",
+  "total_cases": 100,
+  "passed_cases": 100,
+  "failed_cases": 0,
+  "safety_violations": 0,
+  "elapsed_sec": 0.686248057,
+  "cases_per_sec": 145.71990256287165,
+  "mean_latency_ms": 6.7821888999999995,
+  "p95_latency_ms": 33.64416,
+  "p99_latency_ms": 54.337774,
+  "failures_by_family": {},
+  "failures_by_category": {}
+}

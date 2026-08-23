@@ -39,14 +39,16 @@ def predict_endpoint(interface: str = Query("Branch3-Uplink", description="Inter
         
     try:
         conn = sqlite3.connect(DB_PATH)
-        # Fetch the last 30 samples of telemetry
-        df = pd.read_sql_query("""
-            SELECT timestamp, utilization, latency, jitter, drops, routing_flaps 
-            FROM metrics 
-            WHERE interface = ? 
-            ORDER BY timestamp DESC LIMIT 30
-        """, conn, params=(interface,))
-        conn.close()
+        try:
+            # Fetch the last 30 samples of telemetry
+            df = pd.read_sql_query("""
+                SELECT timestamp, utilization, latency, jitter, drops, routing_flaps 
+                FROM metrics 
+                WHERE interface = ? 
+                ORDER BY timestamp DESC LIMIT 30
+            """, conn, params=(interface,))
+        finally:
+            conn.close()
         
         if df.empty:
             return {

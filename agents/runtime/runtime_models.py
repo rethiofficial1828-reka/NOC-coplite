@@ -94,6 +94,16 @@ class OSInfo(BaseModel):
     virtualization_environment: VirtualizationEnvironment = Field(default=VirtualizationEnvironment.UNKNOWN)
     is_virtualized: bool = Field(default=False)
 
+    @property
+    def system(self) -> str:
+        """Compatibility property returning system operating system string."""
+        return self.operating_system.value
+
+    @property
+    def virtualization(self) -> str:
+        """Compatibility property returning virtualization environment string."""
+        return self.virtualization_environment.value
+
 
 class GPUInfo(BaseModel):
     """Physical GPU hardware detection status."""
@@ -110,6 +120,23 @@ class GPUInfo(BaseModel):
     detection_method: str = Field(default="NONE")
     error_message: Optional[str] = Field(default=None)
 
+    @property
+    def has_gpu(self) -> bool:
+        """Compatibility property indicating if physical/CUDA GPU is present."""
+        return self.vendor != GPUVendor.NONE or self.cuda_available
+
+
+class GPUCapability(BaseModel):
+    """Compatibility model for GPU capability querying in runtime/selector tests."""
+
+    model_config = ConfigDict(frozen=False)
+
+    has_gpu: bool = Field(default=False)
+    vendor: GPUVendor = Field(default=GPUVendor.NONE)
+    vram_mb: float = Field(default=0.0, ge=0.0)
+    cuda_available: bool = Field(default=False)
+    status: CapabilityStatus = Field(default=CapabilityStatus.UNAVAILABLE)
+
 
 class OllamaInfo(BaseModel):
     """Ollama LLM service discovery status."""
@@ -124,6 +151,11 @@ class OllamaInfo(BaseModel):
     qwen_model_tag: str = Field(default="qwen3:1.7b")
     remote_gpu_accelerated: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None)
+
+    @property
+    def is_installed(self) -> bool:
+        """Compatibility property indicating if Ollama service is available/installed."""
+        return self.available or self.location != OllamaLocation.UNAVAILABLE
 
 
 class RuntimeCapabilities(BaseModel):

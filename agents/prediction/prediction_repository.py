@@ -73,8 +73,10 @@ class PredictionRepository:
         try:
             with self._lock:
                 conn = sqlite3.connect(current_db_path, timeout=10.0)
-                df = pd.read_sql_query(query, conn, params=(interface, max(1, window_size)))
-                conn.close()
+                try:
+                    df = pd.read_sql_query(query, conn, params=(interface, max(1, window_size)))
+                finally:
+                    conn.close()
 
             if df.empty:
                 return pd.DataFrame()

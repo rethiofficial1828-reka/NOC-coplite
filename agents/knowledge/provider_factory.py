@@ -72,7 +72,7 @@ class ProviderFactory:
         target_type = (provider_type or cfg.get("LLM_PROVIDER_TYPE", LLM_PROVIDER_TYPE)).lower().strip()
 
         # Check ServiceContainer first if registered
-        if container and container.has(LLMProvider):
+        if container and container.has_service(LLMProvider):
             instance = container.get(LLMProvider)
             if isinstance(instance, LLMProvider):
                 return instance
@@ -88,7 +88,7 @@ class ProviderFactory:
             logger.info(f"Created LLM provider '{provider_cls.__name__}' for type '{target_type}'.")
 
             # Register in ServiceContainer if container provided
-            if container and not container.has(LLMProvider):
+            if container and not container.has_service(LLMProvider):
                 container.register_instance(LLMProvider, provider_instance)
 
             return provider_instance

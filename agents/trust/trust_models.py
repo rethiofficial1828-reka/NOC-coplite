@@ -42,6 +42,10 @@ class AutonomyDecision(str, Enum):
     BLOCKED = "BLOCKED"
 
 
+# Compatibility alias for safe autonomy policy decisions
+AutonomyPolicyResult = AutonomyDecision
+
+
 class BlastRadiusLevel(str, Enum):
     """Impact severity rating for current incidents or potential operational actions."""
 
@@ -338,3 +342,10 @@ class TrustStatistics(BaseModel):
     blocked_count: int = Field(default=0, ge=0)
     avg_trust_score: float = Field(default=0.0, ge=0.0, le=1.0)
     avg_processing_time_ms: float = Field(default=0.0, ge=0.0)
+
+
+# Bind class-level attribute descriptors for model fields to support MagicMock spec reflection
+for _model in (TrustDecision, TrustAssessment):
+    for _field_name in _model.model_fields:
+        if not hasattr(_model, _field_name):
+            setattr(_model, _field_name, None)

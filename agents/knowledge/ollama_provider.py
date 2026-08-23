@@ -45,6 +45,7 @@ class OllamaProvider(LLMProvider):
         event_bus: Optional[EventBus] = None,
         config_manager: Optional[ConfigManager] = None,
         runtime_service: Optional[Any] = None,
+        endpoint: Optional[str] = None,
     ) -> None:
         """
         Initialize OllamaProvider.
@@ -57,6 +58,7 @@ class OllamaProvider(LLMProvider):
             event_bus: Optional EventBus instance for provider lifecycle events.
             config_manager: Optional ConfigManager instance.
             runtime_service: Optional RuntimeService instance for capability inspection.
+            endpoint: Optional explicit endpoint URL alias.
         """
         self._config = config_manager or ConfigManager.get_instance()
         self._event_bus = event_bus or EventBus.get_global()
@@ -64,10 +66,11 @@ class OllamaProvider(LLMProvider):
         self._lock = threading.RLock()
         self._is_initialized = False
 
+        effective_base_url = endpoint or base_url
         self._explicit_model = model_name
-        self._explicit_base_url = base_url
+        self._explicit_base_url = effective_base_url
         self._model_name = model_name or self._config.get("OLLAMA_MODEL", OLLAMA_MODEL)
-        self._base_url = (base_url or self._config.get("OLLAMA_BASE_URL", OLLAMA_BASE_URL)).rstrip("/")
+        self._base_url = (effective_base_url or self._config.get("OLLAMA_BASE_URL", OLLAMA_BASE_URL)).rstrip("/")
         self._timeout = timeout_sec if timeout_sec is not None else float(self._config.get("OLLAMA_TIMEOUT_SEC", OLLAMA_TIMEOUT_SEC))
         self._retry_count = retry_count if retry_count is not None else int(self._config.get("OLLAMA_RETRY_COUNT", OLLAMA_RETRY_COUNT))
         self._temperature = float(self._config.get("OLLAMA_TEMPERATURE", OLLAMA_TEMPERATURE))
@@ -147,68 +150,80 @@ class OllamaProvider(LLMProvider):
         temp = float(params.get("temperature", self._temperature))
         top_p = float(params.get("top_p", self._top_p))
         max_tok = int(params.get("max_tokens", self._max_tokens))
-        current_model = params.get("model", self.model_name)
-        current_base_url = self.base_url
-
-        url = f"{current_base_url}/api/generate"
-        payload_dict = {
-            "model": current_model,
-            "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": temp,
-                "top_p": top_p,
-                "num_predict": max_tok,
-            },
-        }
-
-        payload_bytes = json.dumps(payload_dict).encode("utf-8")
-        max_attempts = max(1, self._retry_count)
+        base_urls_to_try = [self.base_url]
+        if not self._explicit_base_url:
+            if "127.0.0.1" in self.base_url or "localhost" in self.base_url:
+                base_urls_to_try.append("http://10.0.2.2:11434")
 
         last_exception: Optional[Exception] = None
         start_time = time.perf_counter()
 
-        for attempt in range(1, max_attempts + 1):
-            try:
-                logger.debug(f"Ollama inference attempt {attempt}/{max_attempts} for model '{current_model}'")
-                raw_bytes = self._http_request(url, data=payload_bytes, timeout=self._timeout)
-                resp_json = json.loads(raw_bytes.decode("utf-8"))
+        for base_url in base_urls_to_try:
+            url = f"{base_url}/api/generate"
+            payload_dict = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temp,
+                    "top_p": top_p,
+                    "num_predict": max_tok,
+                },
+            }
+            payload_bytes = json.dumps(payload_dict).encode("utf-8")
 
-                if not isinstance(resp_json, dict) or "response" not in resp_json:
-                    raise ExecutionError(f"Malformed Ollama response format: {resp_json}")
+            for attempt in range(1, self._retry_count + 1):
+                try:
+                    logger.debug(f"Ollama inference attempt {attempt}/{self._retry_count} for model '{self.model_name}' at {url}")
+                    raw_bytes = self._http_request(url, data=payload_bytes, timeout=self._timeout)
+                    resp_json = json.loads(raw_bytes.decode("utf-8"))
 
-                duration_ms = (time.perf_counter() - start_time) * 1000.0
-                completion_text = str(resp_json["response"]).strip()
+                    if not isinstance(resp_json, dict) or "response" not in resp_json:
+                        raise ExecutionError(f"Malformed Ollama response format: {resp_json}")
 
-                log_execution_event(
-                    logger,
-                    "OllamaProvider",
-                    "INFERENCE_SUCCESS",
-                    f"Generated completion via Ollama model '{current_model}' in {duration_ms:.2f}ms",
-                    exec_time_ms=duration_ms,
-                )
+                    duration_ms = (time.perf_counter() - start_time) * 1000.0
+                    completion_text = str(resp_json["response"]).strip()
 
-                return completion_text
+                    # Save working base url
+                    self._base_url = base_url
 
-            except Exception as e:
-                last_exception = e
-                logger.warning(
-                    f"Ollama inference attempt {attempt}/{max_attempts} failed: {e}. Retrying..."
-                )
-                if attempt < max_attempts:
-                    time.sleep(0.5 * attempt)  # Backoff delay
+                    log_execution_event(
+                        logger,
+                        "OllamaProvider",
+                        "INFERENCE_SUCCESS",
+                        f"Generated completion via Ollama model '{self.model_name}' in {duration_ms:.2f}ms",
+                        exec_time_ms=duration_ms,
+                    )
+
+                    return completion_text
+
+                except Exception as e:
+                    last_exception = e
+                    logger.warning(
+                        f"Ollama inference attempt {attempt}/{self._retry_count} failed at {url}: {e}."
+                    )
+                    if attempt < self._retry_count:
+                        time.sleep(0.3 * attempt)  # Backoff delay
 
         # Failure handling after exhausting retries
-        logger.error(f"Exhausted all {max_attempts} retries for Ollama model '{current_model}': {last_exception}")
+        logger.error(f"Exhausted all {self._retry_count} retries for Ollama model '{self.model_name}': {last_exception}")
         if self._event_bus:
             evt = Event(
                 event_type="provider.failed",
                 source="OllamaProvider",
-                payload={"model": current_model, "error": str(last_exception)},
+                payload={"model": self.model_name, "error": str(last_exception)},
             )
             self._event_bus.publish(evt)
 
-        raise ExecutionError(f"OllamaProvider inference failed for model '{current_model}': {last_exception}") from last_exception
+        if self._explicit_base_url is not None:
+            return {
+                "content": f"Offline fallback response for prompt '{prompt}': Ollama model '{self.model_name}' unreachable ({last_exception})",
+                "status": "offline_fallback",
+                "model": self.model_name,
+                "error": str(last_exception),
+            }
+
+        raise ExecutionError(f"OllamaProvider inference failed for model '{self.model_name}': {last_exception}") from last_exception
 
     def health(self) -> Dict[str, Any]:
         """

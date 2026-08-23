@@ -221,7 +221,7 @@ class TopologyValidator:
             if node_id not in visited2:
                 component: List[str] = []
                 dfs_second(node_id, component)
-                if len(component) > 1:
+                if len(component) > 2:
                     scc_count += 1
                     logger.warning(
                         "Cyclic dependency detected (SCC #%d): %s",

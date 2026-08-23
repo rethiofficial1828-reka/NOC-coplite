@@ -31,6 +31,12 @@ class RuntimeService:
         """
         return self._capability_manager.get_health_status(force_refresh=force_refresh)
 
+    def check_runtime_health(self, force_refresh: bool = False) -> RuntimeHealthStatus:
+        """
+        Compatibility alias delegating to get_health_status.
+        """
+        return self.get_health_status(force_refresh=force_refresh)
+
     def refresh(self) -> RuntimeCapabilities:
         """
         Force immediate hardware and service capability detection.

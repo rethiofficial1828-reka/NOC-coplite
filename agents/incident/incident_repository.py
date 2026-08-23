@@ -5,6 +5,7 @@ Provides low-level thread-safe SQLite persistence for incident records, timeline
 and sequential incident ID generation (e.g. INC-2026-000001). Pure persistence layer.
 """
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -50,13 +51,18 @@ class IncidentRepository:
         """Path to database."""
         return self._db_path
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _get_connection(self):
         """Create database connection with Row factory."""
         current_path = self._config_manager.get("DB_PATH", self._db_path)
         os.makedirs(os.path.dirname(current_path), exist_ok=True)
         conn = sqlite3.connect(current_path, timeout=10.0)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
     def _ensure_tables(self) -> None:
         """Ensure incidents, timeline, and sequence tables exist."""
