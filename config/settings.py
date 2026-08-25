@@ -3,7 +3,7 @@ import os
 # Project root directory (parent directory of config package)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = "1.1.0-rc1"
+VERSION = "1.2.0-rc1"
 __version__ = VERSION
 
 # Key directories
@@ -65,3 +65,10 @@ DEVICE_REGISTRY = [
 
 # Convenience: ordered list of interface names (matches DB "interface" column)
 DEVICE_NAMES = [d["name"] for d in DEVICE_REGISTRY]
+
+# ---------------------------------------------------------------------------
+# Network Control-Plane Configuration (v1.2)
+# ---------------------------------------------------------------------------
+LAB_CONTROL_PLANE = os.getenv("NOC_LAB_CONTROL_PLANE", "none")
+SUPPORTED_CONTROL_PLANES = ["none", "gnmi", "netconf", "frr_zapi"]
+

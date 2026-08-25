@@ -34,6 +34,7 @@ from agents.failover.failover_models import (
     FailoverResult,
     LearningClassification,
     PredictedOutcome,
+    ProductionExecutionDisabledError,
     RollbackResult,
     RollbackStatus,
     VerificationResult,
@@ -179,6 +180,13 @@ class FailoverService:
         Execute full closed-loop failover lifecycle.
         """
         with self._lock:
+            if execution_mode == ExecutionMode.PRODUCTION_AUTHORIZED:
+                logger.error("PRODUCTION_AUTHORIZED execution requested but permanently disabled in v1.2.")
+                raise ProductionExecutionDisabledError(
+                    "PRODUCTION_AUTHORIZED is permanently disabled in NOC-Copilot v1.2. "
+                    "Production network mutation is not permitted."
+                )
+
             req_id = str(uuid.uuid4())
             self._publish_event("failover.started", {"request_id": req_id, "target": target_interface_or_device, "mode": execution_mode.value})
 

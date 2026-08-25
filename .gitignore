@@ -52,3 +52,7 @@ data/*_results.json
 
 # Streamlit cache
 .streamlit/cache/
+
+# ContainerLab runtime state
+clab-*/
+.clab/

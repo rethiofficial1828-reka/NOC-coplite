@@ -10,6 +10,9 @@ topology:
       kind: linux
       image: frrouting/frr:latest
       mgmt-ipv4: 172.20.20.10
+      binds:
+        - lab_configs/hub/daemons:/etc/frr/daemons
+        - lab_configs/hub/frr.conf:/etc/frr/frr.conf
 
     branch1:
       kind: linux
@@ -30,11 +33,17 @@ topology:
       kind: linux
       image: frrouting/frr:latest
       mgmt-ipv4: 172.20.20.14
+      binds:
+        - lab_configs/rtr-01/daemons:/etc/frr/daemons
+        - lab_configs/rtr-01/frr.conf:/etc/frr/frr.conf
 
     branch3-uplink:
       kind: linux
       image: frrouting/frr:latest
       mgmt-ipv4: 172.20.20.15
+      binds:
+        - lab_configs/branch3-uplink/daemons:/etc/frr/daemons
+        - lab_configs/branch3-uplink/frr.conf:/etc/frr/frr.conf
 
   links:
     - endpoints:

@@ -2,14 +2,14 @@
 
 An AI-powered Network Operations Center copilot that predicts network failures before they happen and provides topology-aware incident intelligence, evidence-grounded remediation, explainable decisioning, historical pattern intelligence, closed-loop adaptive learning, and air-gapped federated intelligence — fully air-gapped, zero cloud dependencies.
 
-![Version](https://img.shields.io/badge/Version-v1.1.0--rc1-blue)
+![Version](https://img.shields.io/badge/Version-v1.2.0--rc1-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![XGBoost](https://img.shields.io/badge/ML-XGBoost-orange)
 ![Streamlit](https://img.shields.io/badge/UI-Streamlit-red)
-![Tests](https://img.shields.io/badge/Tests-19%2C351%20Passing-brightgreen)
-![Targeted](https://img.shields.io/badge/Targeted%20Suites-391%20Passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-19%2C418%20Passing-brightgreen)
+![Live Lab](https://img.shields.io/badge/ContainerLab-FRRouting%20Verified-brightgreen)
 ![Golden](https://img.shields.io/badge/Golden%20Scenario-13%2F13%20Passing-success)
-![Stress](https://img.shields.io/badge/Stress-100k%20Passed-success)
+![Chaos](https://img.shields.io/badge/Chaos%20Validation-10%2F10%20Passed-success)
 
 ## 🌟 NOC-Copilot v1.1 Intelligence Capabilities
 

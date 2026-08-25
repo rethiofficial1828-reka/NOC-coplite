@@ -14,6 +14,32 @@ import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
 
+from agents.core.exceptions import ExecutionError, ValidationError
+
+
+# ---------------------------------------------------------------------------
+# Exceptions
+# ---------------------------------------------------------------------------
+
+
+class ProductionExecutionDisabledError(ExecutionError):
+    """Raised when PRODUCTION_AUTHORIZED execution is attempted in an environment where it is disabled."""
+
+    pass
+
+
+class ControlPlaneNotConfiguredError(ExecutionError):
+    """Raised when an operation requires an active control plane driver that is not configured."""
+
+    pass
+
+
+class UnauthorizedTargetError(ValidationError):
+    """Raised when a target device, interface, or provider is not in the declared allowlist."""
+
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Enumerations
 # ---------------------------------------------------------------------------
@@ -24,7 +50,9 @@ class ExecutionMode(str, Enum):
 
     DRY_RUN = "DRY_RUN"
     SIMULATION = "SIMULATION"
+    LAB_AUTHORIZED = "LAB_AUTHORIZED"
     APPROVED_EXECUTION = "APPROVED_EXECUTION"
+    PRODUCTION_AUTHORIZED = "PRODUCTION_AUTHORIZED"
 
 
 class ApprovalStatus(str, Enum):

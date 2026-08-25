@@ -36,7 +36,7 @@ class AuthorizedNetworkAdapter(IExecutionAdapter):
         if not target or not isinstance(target, str):
             return False
         # Reject executable injection syntax
-        for s in [";", "&&", "||", "`", "$(", "sudo", "bash", "sh"]:
+        for s in [";", "&&", "||", "`", "$", "|", ">", "<", "sudo", "rm ", "bash", "sh"]:
             if s in target:
                 return False
         return True
