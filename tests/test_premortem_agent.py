@@ -47,6 +47,9 @@ from agents.premortem.premortem_agent import PreMortemAgent
 from agents.premortem.premortem_confidence import PreMortemConfidenceEngine
 from agents.premortem.premortem_engine import PreMortemEngine
 from agents.premortem.premortem_models import (
+    HistoricalComparisonItem,
+    HistoricalEvidenceClassification,
+    HistoricalIncidentLearningResult,
     ObservationType,
     PreMortemConfidence,
     PreMortemResult,
@@ -295,6 +298,209 @@ class TestPreMortemAgent(unittest.TestCase):
         agent = PreMortemAgent()
         self.assertEqual(agent.name, "PreMortemAgent")
         self.assertTrue(agent.metadata.capabilities.supports_parallel_execution)
+
+
+class TestAdaptiveIncidentLearning(unittest.TestCase):
+    """
+    Comprehensive test suite for Phase 4: Adaptive Incident Learning & Historical Pattern Intelligence.
+    """
+
+    def setUp(self) -> None:
+        self.service = PreMortemService()
+        self.mock_reasoning = self._create_mock_reasoning()
+
+    def _create_mock_reasoning(self, confidence: float = 0.88) -> ReasoningResult:
+        rc = RootCause(
+            title="WAN Link Congestion & Traffic Saturation",
+            probability=confidence,
+            description="Interface utilization > 90%",
+            recommended_actions=["Switch to backup link ISP-B"],
+        )
+        expl = ReasoningExplanation(
+            selected_root_cause_title=rc.title,
+            why_chosen="High bandwidth utilization and packet drop rate",
+            supporting_evidence_summary="Bandwidth 88.5%, loss 3.0%",
+            rejected_hypotheses=[],
+            contradictions_summary="None",
+            evidence_quality_summary="High",
+            missing_evidence_summary="None",
+            recommended_next_steps=rc.recommended_actions,
+        )
+        conclusion = InvestigationConclusion(
+            request_id="req-hist-001",
+            primary_root_cause=rc,
+            ranked_root_causes=[],
+            ranked_hypotheses=[],
+            contradictions=[],
+            confidence_result=ConfidenceResult(overall_confidence=confidence),
+            explanation=expl,
+        )
+        return ReasoningResult(
+            request_id="req-hist-001",
+            conclusion=conclusion,
+            statistics=ReasoningStatistics(),
+        )
+
+    def test_01_fingerprint_extraction_and_reuse(self) -> None:
+        """Fingerprint is deterministically generated and reusable."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            telemetry_payload={"bandwidth_utilization": 92.0, "packet_loss": 6.0},
+        )
+        self.assertIsNotNone(res.fingerprint)
+        self.assertIn("WAN", res.fingerprint.incident_type)
+        self.assertEqual(res.fingerprint.interface_pattern, "HIGH_UTILIZATION_WITH_PACKET_LOSS")
+
+    def test_02_historical_matching(self) -> None:
+        """Historical incidents are retrieved and matched against fingerprint."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+        )
+        self.assertGreater(len(res.matched_incidents), 0)
+        top = res.matched_incidents[0]
+        self.assertIsNotNone(top.incident_id)
+        self.assertGreaterEqual(top.similarity_score, 0.40)
+        self.assertIsNotNone(top.historical_root_cause)
+        self.assertIsNotNone(top.historical_resolution)
+        self.assertIsNotNone(top.historical_outcome)
+
+    def test_03_similarity_ranking(self) -> None:
+        """Historical incident matches are ordered by similarity score."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+        )
+        scores = [m.similarity_score for m in res.matched_incidents]
+        self.assertEqual(scores, sorted(scores, reverse=True))
+
+    def test_04_pattern_clustering(self) -> None:
+        """Recurring incident pattern clusters are accurately identified."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+        )
+        self.assertGreater(len(res.pattern_clusters), 0)
+        cluster = res.pattern_clusters[0]
+        self.assertEqual(cluster.category, "WAN_CONGESTION")
+        self.assertGreater(cluster.frequency_count, 0)
+        self.assertGreater(len(cluster.common_indicators), 0)
+
+    def test_05_current_vs_historical_comparison(self) -> None:
+        """Multi-dimensional comparison evaluates existing metrics between current and historical cases."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            telemetry_payload={"bandwidth_utilization": 88.5, "packet_loss": 3.0},
+        )
+        self.assertGreater(len(res.comparisons), 0)
+        dims = [c.dimension for c in res.comparisons]
+        self.assertIn("Incident Type & Signature", dims)
+        self.assertIn("Bandwidth Utilization", dims)
+        self.assertIn("Packet Loss Rate", dims)
+        self.assertIn("Root Cause Hypothesis", dims)
+
+    def test_06_classification_supporting_contradicting_inconclusive(self) -> None:
+        """Comparisons are strictly classified into SUPPORTING, CONTRADICTING, or INCONCLUSIVE."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+        )
+        for comp in res.comparisons:
+            self.assertIn(
+                comp.relationship,
+                (
+                    HistoricalEvidenceClassification.SUPPORTING,
+                    HistoricalEvidenceClassification.CONTRADICTING,
+                    HistoricalEvidenceClassification.INCONCLUSIVE,
+                ),
+            )
+
+    def test_07_missing_historical_datasets_graceful(self) -> None:
+        """Gracefully handles missing or empty historical matches without throwing errors."""
+        empty_service = PreMortemService()
+        # Override matcher with empty return
+        empty_service._engine._matcher.match_fingerprint = lambda *args, **kwargs: []
+
+        res = empty_service.analyze_historical_learning(
+            target_entity="Isolated-Switch-01",
+            reasoning_result=None,
+            telemetry_payload={"bandwidth_utilization": 20.0, "packet_loss": 0.0},
+        )
+        self.assertEqual(len(res.matched_incidents), 0)
+        self.assertEqual(res.confidence_adjustment, 0.0)
+        self.assertEqual(res.comparisons[0].relationship, HistoricalEvidenceClassification.INCONCLUSIVE)
+
+    def test_08_deterministic_output(self) -> None:
+        """Identical inputs produce identical, deterministic historical learning results."""
+        res1 = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            telemetry_payload={"bandwidth_utilization": 88.5},
+        )
+        res2 = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            telemetry_payload={"bandwidth_utilization": 88.5},
+        )
+        self.assertEqual(res1.fingerprint.incident_type, res2.fingerprint.incident_type)
+        self.assertEqual(res1.confidence_adjustment, res2.confidence_adjustment)
+        self.assertEqual(len(res1.comparisons), len(res2.comparisons))
+
+    def test_09_evidence_registry_integration_with_historical_provenance(self) -> None:
+        """Historical evidence registered into EvidenceRegistry carries strictly provenance=HISTORICAL."""
+        ctx = InvestigationContext(request=InvestigationRequest(target_devices=["Branch3-Uplink"], operator_query="Investigate Branch3-Uplink"))
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            context=ctx,
+        )
+        hist_evidence = ctx.evidence_registry.get_by_provenance("HISTORICAL")
+        self.assertGreater(len(hist_evidence), 0)
+        for ev in hist_evidence:
+            self.assertEqual(ev.provenance, "HISTORICAL")
+            self.assertIn("Branch3-Uplink", ev.affected_entity)
+
+    def test_10_confidence_adjustment_bounds(self) -> None:
+        """Confidence adjustment is strictly bounded within [-0.50, +0.50]."""
+        res = self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+        )
+        self.assertGreaterEqual(res.confidence_adjustment, -0.50)
+        self.assertLessEqual(res.confidence_adjustment, 0.50)
+
+    def test_11_historical_records_immutability(self) -> None:
+        """Historical matches are read-only and do not mutate the underlying knowledge base."""
+        res1 = self.service.analyze_historical_learning(target_entity="Branch3-Uplink")
+        hist_id_1 = res1.matched_incidents[0].incident_id
+        res2 = self.service.analyze_historical_learning(target_entity="Branch3-Uplink")
+        hist_id_2 = res2.matched_incidents[0].incident_id
+        self.assertEqual(hist_id_1, hist_id_2)
+
+    def test_12_no_duplicate_registration(self) -> None:
+        """Repeated analysis on same context does not duplicate historical evidence registrations."""
+        ctx = InvestigationContext(request=InvestigationRequest(target_devices=["Branch3-Uplink"], operator_query="Investigate Branch3-Uplink"))
+        self.service.analyze_historical_learning(target_entity="Branch3-Uplink", context=ctx)
+        count_first = len(ctx.evidence_registry.get_by_provenance("HISTORICAL"))
+
+        self.service.analyze_historical_learning(target_entity="Branch3-Uplink", context=ctx)
+        count_second = len(ctx.evidence_registry.get_by_provenance("HISTORICAL"))
+        self.assertEqual(count_first, count_second)
+
+    def test_13_cross_agent_explainability_integration(self) -> None:
+        """InvestigationContext.build_evidence_lineage properly integrates registered historical evidence."""
+        ctx = InvestigationContext(request=InvestigationRequest(target_devices=["Branch3-Uplink"], operator_query="Investigate Branch3-Uplink"))
+        self.service.analyze_historical_learning(
+            target_entity="Branch3-Uplink",
+            reasoning_result=self.mock_reasoning,
+            context=ctx,
+        )
+        lineage = ctx.build_evidence_lineage(target_entity="Branch3-Uplink")
+        self.assertGreater(lineage.evidence_count, 0)
+        hist_items = [e for e in lineage.timeline if e.provenance == "HISTORICAL"]
+        self.assertGreater(len(hist_items), 0)
 
 
 if __name__ == "__main__":

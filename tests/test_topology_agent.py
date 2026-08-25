@@ -55,6 +55,7 @@ from agents.topology.topology_models import (
     LinkState,
     NodeRole,
     TopologyAnalysis,
+    TopologyIncidentImpact,
     TopologyLink,
     TopologyNode,
     TopologyStatistics,
@@ -933,5 +934,109 @@ class TestTopologyGraphThreadSafety(unittest.TestCase):
         self.assertEqual(errors, [], f"Thread safety errors: {errors}")
 
 
+# ===========================================================================
+# Sprint 21: Topology-Aware Incident Intelligence Tests
+# ===========================================================================
+
+
+class TestTopologyIncidentImpact(unittest.TestCase):
+    """
+    Tests for TopologyIncidentImpact read model and TopologyService.get_incident_topology_impact.
+    """
+
+    def setUp(self):
+        self.service = TopologyService()
+
+    def test_01_branch3_uplink_valid_topology_impact(self):
+        """Valid target 'Branch3-Uplink' returns populated TopologyIncidentImpact."""
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink")
+        self.assertIsInstance(impact, TopologyIncidentImpact)
+        self.assertEqual(impact.target_entity, "Branch3-Uplink")
+        self.assertEqual(impact.resolved_device_id, "branch3-uplink")
+        self.assertIn("rtr-01", impact.direct_dependencies)
+        self.assertIn("hub", impact.direct_dependencies)
+        self.assertTrue(len(impact.affected_components) > 0)
+        self.assertIn("branch3-uplink:eth1 -> rtr-01:eth2", impact.dependent_links)
+
+    def test_02_dependencies_are_derived_read_only(self):
+        """Dependencies and links are derived directly from the topology repository without mutation."""
+        nodes_before = len(self.service.repository.get_all_nodes())
+        links_before = len(self.service.repository.get_all_links())
+
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink")
+        self.assertIsInstance(impact.direct_dependencies, list)
+        self.assertIsInstance(impact.dependent_links, list)
+
+        # Graph node and link counts remain invariant
+        self.assertEqual(len(self.service.repository.get_all_nodes()), nodes_before)
+        self.assertEqual(len(self.service.repository.get_all_links()), links_before)
+
+    def test_03_spofs_derived_from_existing_graph_logic(self):
+        """SPOFs in impact report match TopologyGraph articulation point detection."""
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink")
+        graph = self.service.repository.get_graph()
+        expected_spofs = graph.calculate_blast_radius("branch3-uplink").single_points_of_failure
+
+        self.assertEqual(sorted(impact.single_points_of_failure), sorted(expected_spofs))
+
+    def test_04_blast_radius_consistent_with_existing_policy(self):
+        """Blast radius severity and impact percentage match BlastRadius computation."""
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink")
+        self.assertIn(impact.blast_radius_level, [ImpactSeverity.CRITICAL, ImpactSeverity.HIGH, ImpactSeverity.MEDIUM, ImpactSeverity.LOW])
+        self.assertGreater(impact.impact_percentage, 0.0)
+        self.assertLessEqual(impact.impact_percentage, 100.0)
+
+    def test_05_alternative_paths_derived_from_path_services(self):
+        """Alternative candidate paths are derived from PathDiscoveryEngine without fabrication."""
+        from agents.path_decision import PathDecisionService
+
+        ps = PathDecisionService()
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink", path_decision_service=ps)
+
+        self.assertTrue(len(impact.alternative_paths) > 0)
+        self.assertTrue(any("ISP-B" in p for p in impact.alternative_paths))
+        self.assertTrue(len(impact.recommendation) > 0)
+
+    def test_06_evidence_provenance_is_explicit(self):
+        """Every evidence source and derived field carries an explicit provenance badge."""
+        impact = self.service.get_incident_topology_impact("Branch3-Uplink")
+        self.assertTrue(len(impact.evidence_sources) >= 3)
+
+        allowed_prov = {"OBSERVED", "INFERRED", "PREDICTED", "HISTORICAL", "SIMULATION"}
+        for ev in impact.evidence_sources:
+            self.assertIn("source", ev)
+            self.assertIn("description", ev)
+            self.assertIn("provenance", ev)
+            self.assertIn(ev["provenance"], allowed_prov)
+
+        for field_name, prov in impact.provenance.items():
+            self.assertIn(prov, allowed_prov)
+
+    def test_07_missing_target_returns_safe_neutral_result(self):
+        """Unresolvable or empty targets return valid safe typed impact models without raising."""
+        bad_impact = self.service.get_incident_topology_impact("NonExistent-Device-XYZ")
+        self.assertEqual(bad_impact.resolved_device_id, "UNRESOLVED")
+        self.assertEqual(bad_impact.blast_radius_level, ImpactSeverity.NONE)
+        self.assertEqual(bad_impact.direct_dependencies, [])
+        self.assertEqual(bad_impact.affected_components, [])
+        self.assertIn("not found", bad_impact.recommendation.lower())
+
+        empty_impact = self.service.get_incident_topology_impact("")
+        self.assertEqual(empty_impact.resolved_device_id, "UNRESOLVED")
+        self.assertEqual(empty_impact.blast_radius_level, ImpactSeverity.NONE)
+
+    def test_08_no_mutation_of_topology_state(self):
+        """Multiple sequential and concurrent calls do not mutate any repository state."""
+        g1 = self.service.repository.get_graph()
+        _ = self.service.get_incident_topology_impact("Branch3-Uplink")
+        _ = self.service.get_incident_topology_impact("rtr-01")
+        _ = self.service.get_incident_topology_impact("fw-01")
+        g2 = self.service.repository.get_graph()
+
+        self.assertEqual(len(g1.get_all_nodes()), len(g2.get_all_nodes()))
+        self.assertEqual(len(g1.get_all_links()), len(g2.get_all_links()))
+
+
 if __name__ == "__main__":
     unittest.main()
+

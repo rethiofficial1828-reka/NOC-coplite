@@ -288,6 +288,50 @@ class DecisionExplanation(BaseModel):
     recommended_next_step: str = Field(...)
 
 
+class ConfidenceLevel(str, Enum):
+    """Categorical confidence level thresholds."""
+
+    VERY_HIGH = "VERY_HIGH"  # >= 0.90
+    HIGH = "HIGH"            # >= 0.75
+    MEDIUM = "MEDIUM"        # >= 0.50
+    LOW = "LOW"              # >= 0.25
+    VERY_LOW = "VERY_LOW"    # < 0.25
+
+
+class DecisionExplanationReport(BaseModel):
+    """
+    Typed, evidence-grounded decision explanation answering operator inquiries:
+    1. FINAL DECISION
+    2. CONFIDENCE SCORE
+    3. CONFIDENCE LEVEL
+    4. TOP SUPPORTING FACTORS
+    5. TOP CONTRADICTING FACTORS
+    6. KEY UNCERTAINTIES
+    7. SAFETY CONSTRAINTS
+    8. WHY THE RECOMMENDED PATH WON
+    9. WHY HUMAN APPROVAL IS REQUIRED
+    10. WHAT EVIDENCE WOULD CHANGE THE DECISION
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    explanation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    target_entity: str = Field(..., description="Investigated network entity or interface")
+    final_decision: str = Field(..., description="Actionable final decision summary")
+    confidence_score: float = Field(..., ge=0.0, le=1.0, description="Overall composite confidence score")
+    confidence_level: str = Field(..., description="Categorical confidence level (VERY_HIGH, HIGH, MEDIUM, LOW, VERY_LOW)")
+    top_supporting_factors: List[Dict[str, Any]] = Field(default_factory=list)
+    top_contradicting_factors: List[Dict[str, Any]] = Field(default_factory=list)
+    key_uncertainties: List[Dict[str, Any]] = Field(default_factory=list)
+    safety_constraints: List[str] = Field(default_factory=list)
+    why_recommended_path_won: str = Field(default="", description="Comparative justification for recommended candidate")
+    why_human_approval_required: str = Field(default="", description="Autonomy policy rationale for human sign-off")
+    what_would_change_decision: List[Dict[str, Any]] = Field(default_factory=list, description="Policy/threshold grounded change conditions")
+    evidence_lineage_ref: Optional[str] = Field(default=None, description="Linked InvestigationContext ID")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
 class TrustScore(BaseModel):
     """Multi-dimensional composite trust scoring."""
 

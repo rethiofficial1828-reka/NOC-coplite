@@ -54,3 +54,68 @@ NOC Copilot is an air-gapped, zero-cloud-dependency enterprise network observabi
 - **Controlled Failover**: `FailoverAgent`, `FailoverService`, `PreExecutionValidator`, `PostExecutionVerifier`, `RollbackEngine`
 - **Adaptive Failover & Hysteresis**: `AdaptiveFailoverAgent`, `AdaptiveFailoverService`, `HysteresisEngine`, `StabilityEngine`, `TransitionManager`
 - **Air-Gapped Federated Intelligence**: `FederatedIntelligenceAgent`, `FederatedIntelligenceService`, `PrivacySanitizer`, `CryptoSigner`, `BundleExporter`, `BundleImporter`, `FederatedKnowledgeBase`
+
+---
+
+## 4. v1.1 Unified Intelligence Architecture & Lifecycle
+
+NOC-Copilot v1.1 binds all domain services into a 5-phase intelligence pipeline orchestrated by `GoldenScenarioRunner`:
+
+```text
+  [ Telemetry & Incident ]
+             │
+             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Phase 1: Topology-Aware Incident Intelligence           │
+  │ • Graph BFS traversal & BlastRadiusLevel calculation   │
+  │ • Impact percentage & SPOF articulation identification │
+  │ • Model: TopologyIncidentImpact                        │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Phase 2: Evidence-Centric Cross-Agent Investigation    │
+  │ • Read-only evidence lineage aggregation               │
+  │ • Strict provenance: OBSERVED, PREDICTED, INFERRED...  │
+  │ • Model: InvestigationEvidenceLineage, EvidenceReference│
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Phase 4: Adaptive Incident Learning & Historical Intel │
+  │ • IncidentFingerprintEngine & HistoricalIncidentMatcher│
+  │ • IncidentPatternClusterer & bounded confidence delta  │
+  │ • Model: HistoricalIncidentLearningResult              │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Phase 3: Confidence & Decision Explainability          │
+  │ • DecisionExplainer & TrustService                     │
+  │ • Multi-factor explanation, decisive metrics & safety  │
+  │ • Model: DecisionExplanationReport                     │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Trust Policy & Approval Gate                           │
+  │ • AutonomyPolicy: HUMAN_APPROVAL_REQUIRED (Immutable)  │
+  │ • Hash-bound approval check (ApprovalManager)          │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Controlled DRY_RUN Execution & Verification            │
+  │ • DryRunExecutionAdapter simulation boundary           │
+  │ • Closed-loop PostExecutionVerifier (Loss/Latency)     │
+  │ • Automatic RollbackEngine on verification failure     │
+  └──────────────────────────┬─────────────────────────────┘
+                             │
+                             ▼
+  ┌────────────────────────────────────────────────────────┐
+  │ Phase 5: Closed-Loop Adaptive Decision Learning        │
+  │ • Post-hoc comparison of predicted vs observed metrics │
+  │ • Bounded prediction error & decision quality score    │
+  │ • Model: AdaptiveDecisionLearningResult                │
+  └────────────────────────────────────────────────────────┘
+```

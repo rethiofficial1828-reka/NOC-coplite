@@ -264,3 +264,77 @@ class FailoverResult(BaseModel):
     final_status: ExecutionStatus = Field(default=ExecutionStatus.NOT_STARTED)
     audit_reference: str = Field(default="")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# ---------------------------------------------------------------------------
+# Closed-Loop Adaptive Decision Learning Models (Sprint 21 / v1.1 Phase 5)
+# ---------------------------------------------------------------------------
+
+
+class LearningClassification(str, Enum):
+    """Categorical classification of closed-loop prediction & decision outcome."""
+
+    SUCCESSFUL_PREDICTION = "SUCCESSFUL_PREDICTION"
+    PARTIAL_PREDICTION = "PARTIAL_PREDICTION"
+    INCORRECT_PREDICTION = "INCORRECT_PREDICTION"
+    ACTION_SUCCESSFUL = "ACTION_SUCCESSFUL"
+    ACTION_ROLLED_BACK = "ACTION_ROLLED_BACK"
+    VERIFICATION_FAILED = "VERIFICATION_FAILED"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
+class PredictedOutcome(BaseModel):
+    """Predicted expectations generated prior to failover action execution."""
+
+    model_config = ConfigDict(frozen=False)
+
+    predicted_risk: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    predicted_provider: Optional[str] = Field(default=None)
+    expected_latency_ms: Optional[float] = Field(default=None, ge=0.0)
+    expected_packet_loss: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    expected_verification: str = Field(default="PASSED")
+    expected_impact: Optional[str] = Field(default=None)
+    provenance: str = Field(default="PREDICTED")
+
+
+class ActualOutcome(BaseModel):
+    """Actual observed measurements and verification outcomes post-execution."""
+
+    model_config = ConfigDict(frozen=False)
+
+    actual_provider: Optional[str] = Field(default=None)
+    actual_latency_ms: Optional[float] = Field(default=None, ge=0.0)
+    actual_packet_loss: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    verification_status: VerificationStatus = Field(default=VerificationStatus.NOT_STARTED)
+    rollback_status: RollbackStatus = Field(default=RollbackStatus.NOT_REQUIRED)
+    execution_status: ExecutionStatus = Field(default=ExecutionStatus.NOT_STARTED)
+    restoration_status: Optional[str] = Field(default=None)
+    provenance: str = Field(default="OBSERVED")
+
+
+class AdaptiveDecisionLearningResult(BaseModel):
+    """
+    Strongly-typed, read-only post-hoc closed-loop decision learning record.
+    Captures prediction error, decision quality, factual lessons learned, and future recommendation signals.
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    learning_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    investigation_id: str = Field(...)
+    execution_id: Optional[str] = Field(default=None)
+    target_entity: str = Field(...)
+    selected_path: str = Field(...)
+    predicted_outcome: PredictedOutcome = Field(...)
+    actual_outcome: ActualOutcome = Field(...)
+    learning_classification: LearningClassification = Field(...)
+    prediction_error: float = Field(default=0.0, ge=0.0, le=1.0)
+    decision_quality_score: float = Field(default=1.0, ge=0.0, le=1.0)
+    decision_quality_label: str = Field(default="EXCELLENT")
+    successful_factors: List[str] = Field(default_factory=list)
+    failed_factors: List[str] = Field(default_factory=list)
+    lessons_learned: List[str] = Field(default_factory=list)
+    future_recommendation_signals: List[str] = Field(default_factory=list)
+    provenance: str = Field(default="INFERRED")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Dict[str, Any] = Field(default_factory=dict)

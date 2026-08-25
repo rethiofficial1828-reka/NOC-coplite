@@ -13,18 +13,25 @@ from agents.orchestrator_ai.investigation_models import (
     AgentExecutionPlan,
     ComplexityLevel,
     DependencyType,
+    EvidenceProvenance,
     EvidenceReference,
+    EvidenceRelationship,
     EvidenceRequirement,
     ExecutionEdge,
     ExecutionGraphModel,
     ExecutionNode,
     ExecutionSummary,
+    InvestigationEvidenceLineage,
     InvestigationPlan,
     InvestigationRequest,
     InvestigationResult,
     InvestigationStage,
     InvestigationStatistics,
     PlanStatus,
+)
+from agents.orchestrator_ai.golden_scenario import (
+    GoldenIncidentScenarioResult,
+    GoldenScenarioRunner,
 )
 from agents.orchestrator_ai.investigation_plan import InvestigationPlanBuilder
 from agents.orchestrator_ai.orchestration_service import OrchestrationService
@@ -44,7 +51,10 @@ __all__ = [
     "ExecutionNode",
     "ExecutionEdge",
     "ExecutionGraphModel",
+    "EvidenceProvenance",
     "EvidenceReference",
+    "EvidenceRelationship",
+    "InvestigationEvidenceLineage",
     "ExecutionSummary",
     "InvestigationStatistics",
     "InvestigationResult",
@@ -57,4 +67,6 @@ __all__ = [
     "DynamicScheduler",
     "OrchestrationService",
     "OrchestratorAgent",
+    "GoldenIncidentScenarioResult",
+    "GoldenScenarioRunner",
 ]

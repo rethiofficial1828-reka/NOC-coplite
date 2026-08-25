@@ -1,6 +1,6 @@
 # NOC Copilot — Production Deployment Guide
 
-**Version**: v1.0.0-rc1
+**Version**: v1.1.0-rc1
 
 This guide describes the installation, air-gapped deployment, network setup, hardware configuration, and service verification procedure for NOC Copilot.
 
@@ -132,3 +132,18 @@ PYTHONPATH=. ./venv/bin/streamlit run ui/app.py \
 3. **16 Pre-Execution Checks**: Evaluated before any network configuration changes can be committed.
 4. **SHA-256 Plan Hash & Anti-Replay**: Every approval binds directly to the specific execution plan hash with non-reusable tokens.
 5. **Deterministic PII Scrubbing**: 100% of IPs, MACs, credentials, and hostnames are sanitized before offline `.nockb` bundle exchanges.
+
+---
+
+## 6. System Verification & Acceptance Testing
+
+```bash
+# 1. Full repository test suite (19,351 passing tests, 1 skipped)
+PYTHONPATH=. ./venv/bin/python3 -m pytest -q
+
+# 2. Golden Scenario end-to-end integration suite (13 checks)
+PYTHONPATH=. ./venv/bin/python3 -m pytest -q tests/test_golden_scenario.py
+
+# 3. Targeted v1.1 multi-agent intelligence suites (391 checks)
+PYTHONPATH=. ./venv/bin/python3 -m pytest -q tests/test_failover_agent.py tests/test_adaptive_failover.py tests/test_premortem_agent.py tests/test_orchestrator_ai.py tests/test_trust_agent.py tests/test_path_decision.py tests/test_topology_agent.py tests/test_ui_streamlit.py tests/test_golden_scenario.py
+```

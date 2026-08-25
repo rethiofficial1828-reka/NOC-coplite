@@ -25,8 +25,11 @@ from agents.orchestrator_ai.investigation_context import InvestigationContext
 from agents.orchestrator_ai.investigation_models import (
     AgentExecutionPlan,
     ComplexityLevel,
+    EvidenceProvenance,
     EvidenceReference,
+    EvidenceRelationship,
     ExecutionNode,
+    InvestigationEvidenceLineage,
     InvestigationPlan,
     InvestigationRequest,
     InvestigationResult,
@@ -327,5 +330,189 @@ class TestOrchestratorAI(unittest.TestCase):
         self.assertIn("agent.execution.completed", events_received)
 
 
+# ===========================================================================
+# Phase 2: Evidence-Centric Cross-Agent Investigation Tests
+# ===========================================================================
+
+
+class TestEvidenceLineageCrossAgent(unittest.TestCase):
+    """
+    Tests for EvidenceReference enhancement, EvidenceRegistry query helpers,
+    and InvestigationContext.build_evidence_lineage.
+    """
+
+    def setUp(self) -> None:
+        self.registry = EvidenceRegistry()
+        self.req = InvestigationRequest(
+            operator_query="Investigate Branch3-Uplink degradation",
+            device_id="Branch3-Uplink",
+        )
+        self.ctx = InvestigationContext(request=self.req, evidence_registry=self.registry)
+
+    def test_01_explicit_provenance_registration(self) -> None:
+        """Registering items with all controlled provenance labels succeeds."""
+        e1 = self.registry.register(
+            source_agent="TelemetryAgent",
+            evidence_type="telemetry",
+            payload={"util": 90.0},
+            provenance="OBSERVED",
+            relationship="SUPPORTING",
+        )
+        e2 = self.registry.register(
+            source_agent="PredictionAgent",
+            evidence_type="prediction",
+            payload={"risk": 0.85},
+            provenance="PREDICTED",
+            relationship="SUPPORTING",
+        )
+        e3 = self.registry.register(
+            source_agent="ReasoningAgent",
+            evidence_type="reasoning",
+            payload={"cause": "Congestion"},
+            provenance="INFERRED",
+            relationship="SUPPORTING",
+        )
+        e4 = self.registry.register(
+            source_agent="KnowledgeAgent",
+            evidence_type="knowledge",
+            payload={"pattern": "WAN-01"},
+            provenance="HISTORICAL",
+            relationship="NEUTRAL",
+        )
+        e5 = self.registry.register(
+            source_agent="PathDecisionService",
+            evidence_type="path_decision",
+            payload={"candidate": "ISP-B"},
+            provenance="SIMULATION",
+            relationship="SUPPORTING",
+        )
+
+        self.assertEqual(e1.provenance, "OBSERVED")
+        self.assertEqual(e2.provenance, "PREDICTED")
+        self.assertEqual(e3.provenance, "INFERRED")
+        self.assertEqual(e4.provenance, "HISTORICAL")
+        self.assertEqual(e5.provenance, "SIMULATION")
+
+    def test_02_relationship_classification(self) -> None:
+        """Counts for SUPPORTING, CONTRADICTING, UNRESOLVED, and NEUTRAL are strictly partitioned."""
+        self.registry.register(source_agent="A1", evidence_type="t1", payload={}, relationship="SUPPORTING")
+        self.registry.register(source_agent="A2", evidence_type="t2", payload={}, relationship="SUPPORTING")
+        self.registry.register(source_agent="A3", evidence_type="t3", payload={}, relationship="CONTRADICTING")
+        self.registry.register(source_agent="A4", evidence_type="t4", payload={}, relationship="UNRESOLVED")
+        self.registry.register(source_agent="A5", evidence_type="t5", payload={}, relationship="NEUTRAL")
+
+        lineage = self.ctx.build_evidence_lineage(auto_ingest_subsystems=False)
+        self.assertEqual(lineage.evidence_count, 5)
+        self.assertEqual(lineage.supporting_count, 2)
+        self.assertEqual(lineage.contradicting_count, 1)
+        self.assertEqual(lineage.unresolved_count, 1)
+
+    def test_03_linked_decision_preservation(self) -> None:
+        """Linked decision tags are retained on evidence items and queryable."""
+        decision_str = "HUMAN_APPROVAL_REQUIRED"
+        e = self.registry.register(
+            source_agent="TrustService",
+            evidence_type="trust",
+            payload={"score": 0.52},
+            linked_decision=decision_str,
+            summary="Trust Gate required human review",
+        )
+        self.assertEqual(e.linked_decision, decision_str)
+        matched = self.registry.get_by_linked_decision(decision_str)
+        self.assertEqual(len(matched), 1)
+        self.assertEqual(matched[0].evidence_id, e.evidence_id)
+
+    def test_04_provenance_preservation(self) -> None:
+        """Lineage report retains exact provenance labels across all timeline entries."""
+        self.registry.register(source_agent="TelemetryAgent", evidence_type="telemetry", payload={}, provenance="OBSERVED")
+        self.registry.register(source_agent="PredictionAgent", evidence_type="prediction", payload={}, provenance="PREDICTED")
+        self.registry.register(source_agent="IncidentAgent", evidence_type="incident", payload={}, provenance="INFERRED")
+
+        lineage = self.ctx.build_evidence_lineage(auto_ingest_subsystems=False)
+        provenances = [item.provenance for item in lineage.timeline]
+        self.assertIn("OBSERVED", provenances)
+        self.assertIn("PREDICTED", provenances)
+        self.assertIn("INFERRED", provenances)
+
+    def test_05_filter_helpers(self) -> None:
+        """Read-only query helpers get_by_relationship, get_by_provenance, get_by_linked_decision filter accurately."""
+        self.registry.register(source_agent="T1", evidence_type="tel", payload={}, provenance="OBSERVED", relationship="SUPPORTING", linked_decision="DEC-1")
+        self.registry.register(source_agent="P1", evidence_type="pred", payload={}, provenance="PREDICTED", relationship="CONTRADICTING", linked_decision="DEC-2")
+        self.registry.register(source_agent="R1", evidence_type="reas", payload={}, provenance="INFERRED", relationship="SUPPORTING", linked_decision="DEC-1")
+
+        self.assertEqual(len(self.registry.get_by_relationship("SUPPORTING")), 2)
+        self.assertEqual(len(self.registry.get_by_relationship("CONTRADICTING")), 1)
+        self.assertEqual(len(self.registry.get_by_provenance("OBSERVED")), 1)
+        self.assertEqual(len(self.registry.get_by_provenance("INFERRED")), 1)
+        self.assertEqual(len(self.registry.get_by_linked_decision("DEC-1")), 2)
+        self.assertEqual(len(self.registry.get_by_linked_decision("DEC-2")), 1)
+
+    def test_06_topology_evidence_integration(self) -> None:
+        """Topology impact assessment evidence integrates into the unified lineage report."""
+        self.registry.register(
+            source_agent="TopologyService",
+            evidence_type="topology",
+            payload={"blast_radius": "CRITICAL", "impact_pct": 83.33, "spofs": ["branch3-uplink", "fw-01"]},
+            confidence=1.0,
+            provenance="INFERRED",
+            relationship="SUPPORTING",
+            affected_entity="Branch3-Uplink",
+            linked_decision="Blast Radius: CRITICAL (83.3%)",
+            summary="Topology graph identified critical blast radius and SPOF dependencies.",
+        )
+        lineage = self.ctx.build_evidence_lineage("Branch3-Uplink", auto_ingest_subsystems=False)
+        self.assertTrue(any(e.source_agent == "TopologyService" for e in lineage.timeline))
+        self.assertTrue(any(d["stage"] == "Topology Blast Radius & SPOF" for d in lineage.decision_linkages))
+
+    def test_07_decision_to_evidence_linkage(self) -> None:
+        """Decision linkages map investigation pipeline stages to exact originating evidence IDs."""
+        self.ctx.set_agent_output("TelemetryAgent", {"util": 85.0, "confidence": 1.0})
+        self.ctx.set_agent_output("PredictionAgent", {"risk": 0.88, "confidence": 0.88})
+        self.ctx.set_agent_output("TrustAgent", {"decision": "HUMAN_APPROVAL_REQUIRED", "confidence": 0.52})
+
+        lineage = self.ctx.build_evidence_lineage(auto_ingest_subsystems=True)
+        self.assertTrue(len(lineage.decision_linkages) >= 3)
+        for link in lineage.decision_linkages:
+            self.assertIn("stage", link)
+            self.assertIn("provenance", link)
+            self.assertIn("decision", link)
+            self.assertGreater(len(link["evidence_ids"]), 0)
+
+    def test_08_missing_unresolvable_evidence_handling(self) -> None:
+        """Empty context or unresolved target returns a valid typed lineage report without raising."""
+        empty_ctx = InvestigationContext(request=InvestigationRequest(operator_query="Empty"))
+        lineage = empty_ctx.build_evidence_lineage(target_entity="NonExistent", auto_ingest_subsystems=False)
+        self.assertIsInstance(lineage, InvestigationEvidenceLineage)
+        self.assertEqual(lineage.evidence_count, 0)
+        self.assertEqual(lineage.supporting_count, 0)
+        self.assertEqual(lineage.contradicting_count, 0)
+        self.assertEqual(lineage.top_contributors, [])
+
+    def test_09_readonly_nonmutating_behavior(self) -> None:
+        """Building evidence lineage is strictly read-only and does not mutate external state."""
+        self.registry.register(source_agent="TelemetryAgent", evidence_type="telemetry", payload={"loss": 0.02})
+        count_before = len(self.registry.get_all())
+
+        _ = self.ctx.build_evidence_lineage("Branch3-Uplink", auto_ingest_subsystems=False)
+        _ = self.ctx.build_evidence_lineage("Branch3-Uplink", auto_ingest_subsystems=False)
+
+        count_after = len(self.registry.get_all())
+        self.assertEqual(count_before, count_after)
+
+    def test_10_no_duplicate_evidence_registration(self) -> None:
+        """Auto-ingest subsystems does not register duplicate items on repeated calls."""
+        self.ctx.set_agent_output("TelemetryAgent", {"util": 88.0})
+        self.ctx.set_agent_output("PredictionAgent", {"risk": 0.85})
+
+        lineage1 = self.ctx.build_evidence_lineage(auto_ingest_subsystems=True)
+        count1 = lineage1.evidence_count
+
+        lineage2 = self.ctx.build_evidence_lineage(auto_ingest_subsystems=True)
+        count2 = lineage2.evidence_count
+
+        self.assertEqual(count1, count2)
+
+
 if __name__ == "__main__":
     unittest.main()
+

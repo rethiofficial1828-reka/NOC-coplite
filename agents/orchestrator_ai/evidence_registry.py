@@ -28,6 +28,9 @@ class EvidenceRegistry:
         self._by_device: Dict[str, List[str]] = {}
         self._by_incident: Dict[str, List[str]] = {}
         self._by_type: Dict[str, List[str]] = {}
+        self._by_relationship: Dict[str, List[str]] = {}
+        self._by_provenance: Dict[str, List[str]] = {}
+        self._by_linked_decision: Dict[str, List[str]] = {}
 
     def register_evidence(self, evidence: EvidenceReference) -> str:
         """
@@ -65,9 +68,28 @@ class EvidenceRegistry:
                     self._by_incident[evidence.incident_id] = []
                 self._by_incident[evidence.incident_id].append(eid)
 
+            # Index by relationship
+            rel = (evidence.relationship or "SUPPORTING").upper()
+            if rel not in self._by_relationship:
+                self._by_relationship[rel] = []
+            self._by_relationship[rel].append(eid)
+
+            # Index by provenance
+            prov = (evidence.provenance or "OBSERVED").upper()
+            if prov not in self._by_provenance:
+                self._by_provenance[prov] = []
+            self._by_provenance[prov].append(eid)
+
+            # Index by linked decision if present
+            if evidence.linked_decision:
+                ld = evidence.linked_decision
+                if ld not in self._by_linked_decision:
+                    self._by_linked_decision[ld] = []
+                self._by_linked_decision[ld].append(eid)
+
             logger.debug(
                 f"Registered evidence '{eid}' from agent '{evidence.source_agent}' "
-                f"(type={evidence.evidence_type}, confidence={evidence.confidence:.2f})"
+                f"(type={evidence.evidence_type}, prov={prov}, rel={rel}, confidence={evidence.confidence:.2f})"
             )
             return eid
 
@@ -82,6 +104,11 @@ class EvidenceRegistry:
         topology_ref: Optional[Dict[str, Any]] = None,
         runbook_ref: Optional[Dict[str, Any]] = None,
         parent_evidence_ids: Optional[List[str]] = None,
+        provenance: str = "OBSERVED",
+        relationship: str = "SUPPORTING",
+        affected_entity: Optional[str] = None,
+        linked_decision: Optional[str] = None,
+        summary: Optional[str] = None,
     ) -> EvidenceReference:
         """
         Construct and register a new evidence item.
@@ -94,7 +121,12 @@ class EvidenceRegistry:
             source_agent=source_agent,
             evidence_type=evidence_type,
             confidence=max(0.0, min(1.0, confidence)),
+            provenance=provenance,
+            relationship=relationship,
             device_id=device_id,
+            affected_entity=affected_entity or device_id,
+            linked_decision=linked_decision,
+            summary=summary,
             incident_id=incident_id,
             topology_ref=topology_ref,
             runbook_ref=runbook_ref,
@@ -135,6 +167,24 @@ class EvidenceRegistry:
             ids = self._by_type.get(evidence_type, [])
             return [self._evidence[i].model_copy() for i in ids if i in self._evidence]
 
+    def get_by_relationship(self, relationship: str) -> List[EvidenceReference]:
+        """Fetch evidence items by relationship (e.g. SUPPORTING, CONTRADICTING, UNRESOLVED, NEUTRAL)."""
+        with self._lock:
+            ids = self._by_relationship.get(relationship.upper(), [])
+            return [self._evidence[i].model_copy() for i in ids if i in self._evidence]
+
+    def get_by_provenance(self, provenance: str) -> List[EvidenceReference]:
+        """Fetch evidence items by provenance (e.g. OBSERVED, PREDICTED, INFERRED, HISTORICAL, SIMULATION)."""
+        with self._lock:
+            ids = self._by_provenance.get(provenance.upper(), [])
+            return [self._evidence[i].model_copy() for i in ids if i in self._evidence]
+
+    def get_by_linked_decision(self, linked_decision: str) -> List[EvidenceReference]:
+        """Fetch evidence items linked to a specific decision or conclusion."""
+        with self._lock:
+            ids = self._by_linked_decision.get(linked_decision, [])
+            return [self._evidence[i].model_copy() for i in ids if i in self._evidence]
+
     def get_all(self) -> List[EvidenceReference]:
         """Fetch copy of all registered evidence items."""
         with self._lock:
@@ -173,4 +223,7 @@ class EvidenceRegistry:
             self._by_device.clear()
             self._by_incident.clear()
             self._by_type.clear()
+            self._by_relationship.clear()
+            self._by_provenance.clear()
+            self._by_linked_decision.clear()
             logger.debug("EvidenceRegistry cleared.")

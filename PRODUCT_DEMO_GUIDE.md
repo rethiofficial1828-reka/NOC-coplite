@@ -1,6 +1,6 @@
 # NOC Copilot — Operator Demonstration Guide
 
-**Version**: v1.0.0-rc1
+**Version**: v1.1.0-rc1
 
 This guide provides step-by-step instructions for conducting an executive or operator demonstration of NOC Copilot.
 
@@ -22,46 +22,36 @@ Access the Streamlit Dashboard at `http://localhost:8501`.
 
 ---
 
-## 2. Primary Demo Scenario: Branch3-Uplink WAN Degradation
+## 2. Primary Demo Scenario: Branch3-Uplink Golden Incident Lifecycle
 
-The primary demonstration showcases the end-to-end operator workflow when **Branch3-Uplink** experiences upstream ISP congestion and degradation.
+The primary demonstration showcases the end-to-end multi-agent intelligence pipeline when **Branch3-Uplink** experiences upstream WAN degradation.
 
-### 17-Step Operator Journey
+### 5-Phase Unified Intelligence Flow
 
 ```text
-1. Select Device: Branch3-Uplink
+1. Telemetry & Predictive Risk: XGBoost predicts failure trajectory (45%-91% risk) [PREDICTED]
       ↓
-2. Live Telemetry: Utilization 96%, Latency 195ms, Loss 8.5% [OBSERVED]
+2. Phase 1 — Topology Intelligence: Graph BFS computes blast radius (CRITICAL) & identifies 2 SPOFs
       ↓
-3. Predictive Risk: Failure Risk = 91%, ETA to SLA Breach: ~2.5 min [PREDICTED]
+3. Phase 2 — Evidence Lineage: Aggregates 5 typed evidence items across 4 source agents with strict provenance
       ↓
-4. Incident Creation: IncidentRecord Severity = CRITICAL / HIGH
+4. Phase 4 — Historical Intelligence: Matches WAN_CONGESTION patterns, adjusts confidence (+0.11)
       ↓
-5. Evidence Timeline: Chronological event ledger with provenance tags
+5. Phase 3 — Confidence & Explainability: Synthesizes DecisionExplanationReport (Score 52%, why ISP-B won)
       ↓
-6. AI Reasoning: Root-cause hypothesis ranked ("WAN Link Congestion") + Cited RAG sources
+6. Trust & Safety Gate: Evaluates blast radius > max policy -> Enforces HUMAN_APPROVAL_REQUIRED
       ↓
-7. Trust & Blast Radius: Trust Score = 0.52 / 1.00, Blast Radius = HIGH
+7. Path Decision: PathScoringEngine ranks ISP-B #1 (Score: 94.1 vs ISP-A 72.4)
       ↓
-8. Autonomy Policy Gate: HUMAN_APPROVAL_REQUIRED enforced
+8. Operator Approval Checkpoint: Operator signs off on execution plan hash (OPERATOR-GOLDEN)
       ↓
-9. Path Decision: Evaluates candidates, recommends ISP-B
+9. DRY_RUN Execution: DryRunExecutionAdapter executes simulated provider failover safely
       ↓
-10. UI Selection Rationale: Health 94.1 vs 42.5, Latency 22ms vs 195ms, Loss 0.1% vs 8.5%
+10. Closed-Loop Verification: Post-execution telemetry audit confirms Latency 22ms and Loss 0.20%
       ↓
-11. Controlled DRY_RUN: Operator triggers simulated failover with DryRunExecutionAdapter
+11. Rollback Protection: Automatic RollbackEngine restores healthy baseline if verification fails
       ↓
-12. 16 Pre-Execution Checks: Evaluated and passed before change is committed
-      ↓
-13. Plan Hash Binding: Cryptographically bound to SHA-256 Plan Hash
-      ↓
-14. Closed-Loop Verification: Fresh post-execution telemetry comparison (Latency <= 35ms, Loss <= 0.5%)
-      ↓
-15. Rollback Feasibility: Rollback test triggers automatic restore to original provider if verification fails
-      ↓
-16. Final Lifecycle State: Status = COMPLETED / ROLLED_BACK with Audit Reference
-      ↓
-17. Incident Learning: Offline .nockb bundle export with HMAC-SHA256 and zero PII leaks
+12. Phase 5 — Adaptive Decision Learning: Compares predicted vs observed delta (SUCCESSFUL_PREDICTION, 98% Quality)
 ```
 
 ---
@@ -70,13 +60,15 @@ The primary demonstration showcases the end-to-end operator workflow when **Bran
 
 | Action / Button | UI Location | Behavior / Expected State |
 |---|---|---|
-| **▶️ Start Scenario** | Sidebar (Demo Scenario Controller) | Selects `Branch3-Uplink`, injects WAN congestion, sets risk to elevated (91%), and triggers incident investigation. |
+| **🌟 Golden Incident Panel** | Top Expander | Renders live 5-phase intelligence lifecycle, decisive metrics, and provenance breakdown for `Branch3-Uplink`. |
+| **▶️ Start Scenario** | Sidebar (Demo Scenario Controller) | Selects `Branch3-Uplink`, injects WAN congestion, sets risk to elevated, and triggers incident investigation. |
 | **🔄 Reset Scenario** | Sidebar (Demo Scenario Controller) | Restores healthy baseline across all fleet devices and resets lifecycle states. |
 | **Simulate Dry-Run Failover** | Stage 8 (Controlled Failover Panel) | Runs `FailoverService` in `DRY_RUN` mode via `DryRunExecutionAdapter`, displays SHA-256 plan hash, evaluates 16 prechecks, and updates status to `COMPLETED`. |
 | **Request Approval** | Stage 8 (Controlled Failover Panel) | Creates an approval request bound to the SHA-256 plan hash (`PENDING_APPROVAL`). |
 | **Verify Closed-Loop** | Stage 8 (Controlled Failover Panel) | Executes post-change telemetry audit confirming latency and loss are within SLA bounds. |
 | **Trigger Rollback Test** | Stage 8 (Controlled Failover Panel) | Simulates verification failure and triggers immediate automatic rollback to `ISP-A` (`ROLLED_BACK`). |
 | **Evaluate Adaptive State** | Stage 9 (Adaptive Control Panel) | Evaluates hysteresis cooldown (120s) and hold time (300s) to prevent route flapping. |
+| **Stage 9.5 Adaptive Learning** | Stage 9.5 (Adaptive Learning Panel) | Displays prediction error, bounded decision quality score, and actionable operational lessons learned. |
 | **Export Signed Bundle** | Stage 10 (Federated Exchange Panel) | Exports an offline `.nockb` knowledge bundle with HMAC-SHA256 signature and 0 PII leaks. |
 
 ---
@@ -100,10 +92,10 @@ The dashboard features a high-visibility 7-metric Operator Status Strip at the t
 NOC-Copilot provides concise, factored evidence explanations without exposing raw chain-of-thought:
 
 - **Failure Risk Rationale**: Top contributing signals: Egress drops > 8.5/s, Latency > 195ms, Utilization > 96%.
-- **Root Cause Rationale**: ISP upstream circuit saturation confirmed via queue buffer exhaustion telemetry.
-- **Trust Score Rationale**: Reasoning (30%), Evidence freshness (25%), Adversarial probing (25%), Operational safety (20%).
-- **Blast Radius Rationale**: Multi-branch WAN uplink impacts inter-site voice/data, requiring mandatory human confirmation.
+- **Topology Blast Radius Rationale**: Level CRITICAL (100% network impact, 2 single points of failure).
+- **Evidence Lineage Rationale**: 5 evidence items aggregated across TelemetryAgent, PredictionAgent, IncidentAgent, TopologyAgent, and PreMortemService.
 - **Provider Recommendation Rationale**: Candidate evaluation ranks ISP-B #1 with Score 94.1, Latency 22ms, Packet Loss 0.1%, and full SLA compliance.
+- **Closed-Loop Learning Rationale**: Predicted outcome closely matches observed outcome (Error: 3.0%, Quality: 98.0% EXCELLENT).
 
 ---
 
@@ -118,11 +110,13 @@ NOC-Copilot provides concise, factored evidence explanations without exposing ra
 
 ## 7. Acceptance Evidence & Verification Checklist
 
+- [x] Full repository test suite passes: `pytest -q` (19,351 passed, 1 skipped)
+- [x] Golden Scenario integration suite passes: `pytest -q tests/test_golden_scenario.py` (13/13 passed)
+- [x] Targeted intelligence suites pass: (391/391 passed across 9 suites)
 - [x] Streamlit UI test suite passes: `pytest -q tests/test_ui_streamlit.py` (50/50 passed)
 - [x] Runtime capability suite passes: `pytest -q tests/test_runtime_capability.py` (37/37 passed)
-- [x] Full repository test suite passes: `pytest -q` (19,280 passed, 1 skipped)
 - [x] Headless Streamlit launch passes: `streamlit run ui/app.py --server.headless true --server.port 8501`
 - [x] Operator status strip displays all 7 status dimensions accurately.
-- [x] Scenario controller transitions between Healthy and Congestion states deterministically.
+- [x] Top-level Golden Incident Scenario panel renders full 5-stage lifecycle and provenance tags.
 - [x] 16 pre-execution checks and SHA-256 plan hash render correctly.
 - [x] Rollback simulation executes automatically upon verification failure.

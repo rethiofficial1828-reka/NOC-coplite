@@ -341,3 +341,78 @@ class TopologyStatistics(BaseModel):
         default=None, description="UTC timestamp of last successful topology load"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TopologyIncidentImpact(BaseModel):
+    """
+    Topology-aware incident impact read model for operator investigation.
+
+    Aggregates derived topology relationships, graph blast-radius, SPOF detection,
+    downstream impact, alternative paths, and evidence provenance into a
+    strongly-typed, immutable-friendly presentation artefact.
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    target_entity: str = Field(
+        ..., description="Target device or interface under investigation"
+    )
+    resolved_device_id: str = Field(
+        default="", description="Resolved topology node ID (or UNRESOLVED)"
+    )
+    affected_interface: str = Field(
+        default="", description="Specific interface identified as affected"
+    )
+    direct_dependencies: List[str] = Field(
+        default_factory=list,
+        description="Direct upstream and adjacent dependency node IDs",
+    )
+    affected_components: List[str] = Field(
+        default_factory=list,
+        description="Directly and transitively affected topology component IDs",
+    )
+    dependent_links: List[str] = Field(
+        default_factory=list,
+        description="Incident-affected link identifiers or endpoint descriptions",
+    )
+    potential_service_impact: List[str] = Field(
+        default_factory=list,
+        description="Human-readable potential service and business impacts",
+    )
+    single_points_of_failure: List[str] = Field(
+        default_factory=list,
+        description="Single points of failure in the affected subgraph",
+    )
+    blast_radius_level: ImpactSeverity = Field(
+        default=ImpactSeverity.NONE,
+        description="Blast-radius severity classification from graph analysis",
+    )
+    impact_percentage: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=100.0,
+        description="Percentage of total topology nodes impacted",
+    )
+    alternative_paths: List[str] = Field(
+        default_factory=list,
+        description="Available alternative candidate paths derived from topology/path services",
+    )
+    recommendation: str = Field(
+        default="",
+        description="Topology-grounded operator recommendation",
+    )
+    evidence_sources: List[Dict[str, str]] = Field(
+        default_factory=list,
+        description="Evidence records with source, description, and provenance label",
+    )
+    provenance: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Explicit provenance mapping for derived fields",
+    )
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="UTC timestamp of impact assessment",
+    )
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Additional contextual attributes"
+    )

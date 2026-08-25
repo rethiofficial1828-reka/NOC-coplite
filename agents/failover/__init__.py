@@ -11,6 +11,8 @@ from agents.failover.dry_run_adapter import DryRunExecutionAdapter
 from agents.failover.execution_adapter import IExecutionAdapter
 from agents.failover.failover_agent import FailoverAgent
 from agents.failover.failover_models import (
+    ActualOutcome,
+    AdaptiveDecisionLearningResult,
     ApprovalStatus,
     ExecutionMode,
     ExecutionPlan,
@@ -21,7 +23,9 @@ from agents.failover.failover_models import (
     FailoverApproval,
     FailoverResult,
     FailureReason,
+    LearningClassification,
     PreExecutionCheck,
+    PredictedOutcome,
     RollbackResult,
     RollbackStatus,
     VerificationCheck,
@@ -59,4 +63,8 @@ __all__ = [
     "VerificationResult",
     "RollbackResult",
     "FailoverResult",
+    "LearningClassification",
+    "PredictedOutcome",
+    "ActualOutcome",
+    "AdaptiveDecisionLearningResult",
 ]

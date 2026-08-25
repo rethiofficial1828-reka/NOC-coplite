@@ -23,6 +23,7 @@ from agents.topology.topology_models import (
     ServiceImpact,
     TopologyAnalysis,
     TopologyDependency,
+    TopologyIncidentImpact,
     TopologyLink,
     TopologyNode,
     TopologyPath,
@@ -283,6 +284,270 @@ class TopologyService:
         """
         graph = self._repository.get_graph()
         return graph.calculate_blast_radius(device_id)
+
+    def get_incident_topology_impact(
+        self,
+        target_device_or_interface: str,
+        path_decision_service: Optional[Any] = None,
+    ) -> TopologyIncidentImpact:
+        """
+        Produce a strongly-typed, read-only TopologyIncidentImpact assessment for operator investigation.
+
+        Reuses existing domain services:
+        - analyze_device() for graph traversal, BFS blast-radius, upstream/downstream dependencies, and SPOFs.
+        - PathDiscoveryEngine / PathDecisionService for candidate alternative paths and recommendations.
+
+        Args:
+            target_device_or_interface: Name, ID, or interface under investigation (e.g. 'Branch3-Uplink').
+            path_decision_service: Optional PathDecisionService instance to supply path candidates & recommendation.
+
+        Returns:
+            TopologyIncidentImpact read model with explicit provenance.
+        """
+        with self._lock:
+            # 1. Handle empty / whitespace target safely
+            if not target_device_or_interface or target_device_or_interface.strip() == "":
+                return TopologyIncidentImpact(
+                    target_entity="",
+                    resolved_device_id="UNRESOLVED",
+                    affected_interface="",
+                    direct_dependencies=[],
+                    affected_components=[],
+                    dependent_links=[],
+                    potential_service_impact=[],
+                    single_points_of_failure=[],
+                    blast_radius_level=ImpactSeverity.NONE,
+                    impact_percentage=0.0,
+                    alternative_paths=[],
+                    recommendation="No target specified for topology impact assessment.",
+                    evidence_sources=[
+                        {
+                            "source": "TopologyService",
+                            "description": "Empty target entity provided; topology lookup skipped.",
+                            "provenance": "INFERRED",
+                        }
+                    ],
+                    provenance={
+                        "target_entity": "OBSERVED",
+                        "resolved_device_id": "INFERRED",
+                        "blast_radius_level": "INFERRED",
+                        "recommendation": "INFERRED",
+                    },
+                    metadata={"status": "EMPTY_TARGET"},
+                )
+
+            # 2. Run existing device topology analysis
+            analysis = self.analyze_device(
+                device_id=target_device_or_interface,
+                interface=target_device_or_interface,
+            )
+
+            graph = self._repository.get_graph()
+            all_links = self._repository.get_all_links()
+
+            resolved_node = graph.get_node(analysis.device_id)
+            if resolved_node is None:
+                resolved_node = self._repository.find_node_by_name(target_device_or_interface)
+
+            # 3. Handle non-existent device safely
+            if resolved_node is None:
+                return TopologyIncidentImpact(
+                    target_entity=target_device_or_interface,
+                    resolved_device_id="UNRESOLVED",
+                    affected_interface=target_device_or_interface,
+                    direct_dependencies=[],
+                    affected_components=[],
+                    dependent_links=[],
+                    potential_service_impact=[],
+                    single_points_of_failure=[],
+                    blast_radius_level=ImpactSeverity.NONE,
+                    impact_percentage=0.0,
+                    alternative_paths=[],
+                    recommendation=f"Target '{target_device_or_interface}' not found in active network topology registry.",
+                    evidence_sources=[
+                        {
+                            "source": "TopologyRepository",
+                            "description": f"Target entity '{target_device_or_interface}' not resolved in topology graph.",
+                            "provenance": "OBSERVED",
+                        }
+                    ],
+                    provenance={
+                        "target_entity": "OBSERVED",
+                        "resolved_device_id": "INFERRED",
+                        "blast_radius_level": "INFERRED",
+                        "recommendation": "INFERRED",
+                    },
+                    metadata={"status": "UNRESOLVED_TARGET"},
+                )
+
+            resolved_id = resolved_node.node_id
+            affected_iface = analysis.interface or target_device_or_interface
+
+            # 4. Direct dependencies & incident-affected links from actual links
+            direct_deps: List[str] = []
+            dependent_links: List[str] = []
+            for lnk in all_links:
+                if lnk.source_node_id == resolved_id:
+                    direct_deps.append(lnk.target_node_id)
+                    dependent_links.append(
+                        f"{lnk.source_node_id}:{lnk.source_interface} -> {lnk.target_node_id}:{lnk.target_interface}"
+                    )
+                elif lnk.target_node_id == resolved_id:
+                    direct_deps.append(lnk.source_node_id)
+                    dependent_links.append(
+                        f"{lnk.source_node_id}:{lnk.source_interface} -> {lnk.target_node_id}:{lnk.target_interface}"
+                    )
+            direct_dependencies = sorted(list(set(direct_deps)))
+
+            # 5. Affected components (directly and transitively affected)
+            affected_components = list(analysis.impacted_devices)
+
+            # 6. Potential service impact
+            service_impact_list: List[str] = []
+            if analysis.impacted_services:
+                for si in analysis.impacted_services:
+                    service_impact_list.append(
+                        f"{si.service_name} (Severity: {si.severity.value}, Loss: {'Total' if si.is_total_loss else 'Degraded'}, Alt Paths: {si.redundant_paths_available})"
+                    )
+            else:
+                # Infer logical services from node role and connectivity
+                if resolved_node.role.value in ("wan_interface", "edge", "router"):
+                    service_impact_list.append("Branch WAN Egress (Primary Path Degradation)")
+                    service_impact_list.append("Site-to-Site SD-WAN Tunnel (Subject to Jitter/Loss)")
+                    service_impact_list.append("Egress Routing to Campus Core")
+                elif resolved_node.role.value in ("core", "distribution"):
+                    service_impact_list.append("Campus Backbone Routing")
+                    service_impact_list.append("Enterprise Gateway Transit")
+                elif resolved_node.role.value == "firewall":
+                    service_impact_list.append("Edge Perimeter Security & NAT")
+                    service_impact_list.append("VPN Tunnel Termination")
+
+            # 7. Single points of failure & Blast radius
+            spofs = (
+                list(analysis.blast_radius.single_points_of_failure)
+                if analysis.blast_radius
+                else []
+            )
+            blast_level = (
+                analysis.blast_radius.severity
+                if analysis.blast_radius
+                else ImpactSeverity.LOW
+            )
+            impact_pct = (
+                analysis.blast_radius.impact_percentage
+                if analysis.blast_radius
+                else 0.0
+            )
+
+            # 8. Alternative paths & Recommendation from existing path discovery / decision engine
+            alt_paths: List[str] = []
+            rec_text = ""
+            try:
+                if path_decision_service is not None:
+                    p_res = path_decision_service.evaluate_path_decision(target_device_or_interface)
+                    if p_res and p_res.candidate_paths:
+                        for c in p_res.candidate_paths:
+                            if not c.is_primary:
+                                alt_paths.append(
+                                    f"{c.provider_name} via {c.wan_interface} (Bandwidth: {c.bandwidth_mbps:.0f} Mbps, Hops: {' -> '.join(c.hops)})"
+                                )
+                        if p_res.recommendation:
+                            rec = p_res.recommendation
+                            if rec.recommended_provider and rec.recommended_provider != rec.current_provider:
+                                rec_text = f"Switch traffic from {rec.current_provider} ({rec.current_status}) to candidate {rec.recommended_provider} ({rec.decision_status.value})."
+                            else:
+                                rec_text = f"Maintain active provider {rec.current_provider} ({rec.decision_status.value})."
+                else:
+                    from agents.path_decision.path_discovery import PathDiscoveryEngine
+
+                    disc = PathDiscoveryEngine(topology_service=self)
+                    _primary, candidates, _status = disc.discover_paths(target_device_or_interface)
+                    if candidates:
+                        for c in candidates:
+                            if not c.is_primary:
+                                alt_paths.append(
+                                    f"{c.provider_name} via {c.wan_interface} (Bandwidth: {c.bandwidth_mbps:.0f} Mbps, Hops: {' -> '.join(c.hops)})"
+                                )
+            except Exception as exc:
+                logger.debug("Path decision evaluation skipped during topology impact: %s", exc)
+
+            if not rec_text and alt_paths:
+                rec_text = f"Consider alternate path: {alt_paths[0]} if degradation exceeds SLA thresholds."
+            elif not rec_text:
+                rec_text = "No alternative paths discovered in current topology graph."
+
+            # 9. Assemble explicit evidence records & provenance
+            evidence_sources: List[Dict[str, str]] = [
+                {
+                    "source": "topology.clab.yml / DEVICE_REGISTRY",
+                    "description": f"Direct link connections to adjacent nodes: {', '.join(direct_dependencies)}",
+                    "provenance": "OBSERVED",
+                },
+                {
+                    "source": "TopologyGraph.calculate_blast_radius",
+                    "description": f"Blast radius: {blast_level.value} ({impact_pct:.1f}% network impact, {len(affected_components)} components)",
+                    "provenance": "INFERRED",
+                },
+                {
+                    "source": "TopologyGraph.find_single_points_of_failure",
+                    "description": f"SPOFs in subgraph: {', '.join(spofs) if spofs else 'None'}",
+                    "provenance": "INFERRED",
+                },
+            ]
+            if alt_paths:
+                evidence_sources.append(
+                    {
+                        "source": "PathDiscoveryEngine",
+                        "description": f"Discovered alternative paths: {', '.join(alt_paths)}",
+                        "provenance": "OBSERVED",
+                    }
+                )
+            if rec_text:
+                evidence_sources.append(
+                    {
+                        "source": "PathDecisionService",
+                        "description": f"Topology recommendation: {rec_text}",
+                        "provenance": "SIMULATION",
+                    }
+                )
+
+            provenance_map: Dict[str, str] = {
+                "target_entity": "OBSERVED",
+                "resolved_device_id": "OBSERVED",
+                "affected_interface": "OBSERVED",
+                "direct_dependencies": "OBSERVED",
+                "dependent_links": "OBSERVED",
+                "affected_components": "INFERRED",
+                "single_points_of_failure": "INFERRED",
+                "blast_radius_level": "INFERRED",
+                "impact_percentage": "INFERRED",
+                "potential_service_impact": "PREDICTED",
+                "alternative_paths": "OBSERVED",
+                "recommendation": "SIMULATION",
+            }
+
+            return TopologyIncidentImpact(
+                target_entity=target_device_or_interface,
+                resolved_device_id=resolved_id,
+                affected_interface=affected_iface,
+                direct_dependencies=direct_dependencies,
+                affected_components=affected_components,
+                dependent_links=dependent_links,
+                potential_service_impact=service_impact_list,
+                single_points_of_failure=spofs,
+                blast_radius_level=blast_level,
+                impact_percentage=round(impact_pct, 2),
+                alternative_paths=alt_paths,
+                recommendation=rec_text,
+                evidence_sources=evidence_sources,
+                provenance=provenance_map,
+                timestamp=datetime.now(timezone.utc),
+                metadata={
+                    "node_name": resolved_node.name,
+                    "node_role": resolved_node.role.value,
+                    "criticality": resolved_node.criticality,
+                },
+            )
 
     def summarize_network_state(self) -> Dict[str, Any]:
         """

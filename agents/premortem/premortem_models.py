@@ -212,3 +212,52 @@ class PreMortemStatistics(BaseModel):
     early_warnings_detected: int = Field(default=0, ge=0)
     avg_similarity_score: float = Field(default=0.0, ge=0.0, le=1.0)
     avg_processing_time_ms: float = Field(default=0.0, ge=0.0)
+
+
+class HistoricalEvidenceClassification(str, Enum):
+    """Categorical classification of historical evidence comparison."""
+
+    SUPPORTING = "SUPPORTING"
+    CONTRADICTING = "CONTRADICTING"
+    INCONCLUSIVE = "INCONCLUSIVE"
+
+
+class HistoricalComparisonItem(BaseModel):
+    """Individual comparative evaluation between current incident metrics and matched historical cases."""
+
+    model_config = ConfigDict(frozen=False)
+
+    dimension: str = Field(..., description="Evaluated comparison dimension (e.g. utilization, packet_loss, root_cause)")
+    current_value: Any = Field(..., description="Current observed or inferred metric value")
+    historical_value: Any = Field(..., description="Baseline value from matched historical incident records")
+    similarity: float = Field(default=1.0, ge=0.0, le=1.0, description="Similarity score between current and historical values")
+    relationship: HistoricalEvidenceClassification = Field(
+        default=HistoricalEvidenceClassification.SUPPORTING,
+        description="Whether historical signal supports, contradicts, or is inconclusive regarding current hypothesis",
+    )
+    notes: str = Field(default="", description="Explanatory analysis notes on comparative alignment")
+
+
+class HistoricalIncidentLearningResult(BaseModel):
+    """
+    Read-only typed result model for adaptive incident learning & historical pattern intelligence.
+    """
+
+    model_config = ConfigDict(frozen=False)
+
+    learning_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    investigation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    target_entity: str = Field(..., description="Target device or interface under investigation")
+    fingerprint: IncidentFingerprint = Field(..., description="Normalized signature of current incident")
+    matched_incidents: List[HistoricalIncidentMatch] = Field(default_factory=list, description="Ranked historical incident matches")
+    pattern_clusters: List[IncidentPattern] = Field(default_factory=list, description="Recurring incident pattern clusters")
+    comparisons: List[HistoricalComparisonItem] = Field(default_factory=list, description="Dimension-by-dimension comparison items")
+    historical_support: List[Dict[str, Any]] = Field(default_factory=list, description="Historical signals supporting current hypothesis")
+    historical_contradictions: List[Dict[str, Any]] = Field(default_factory=list, description="Historical signals conflicting with current hypothesis")
+    recurring_failure_signals: List[str] = Field(default_factory=list, description="Common recurring signals across matched patterns")
+    historical_outcomes: List[Dict[str, Any]] = Field(default_factory=list, description="Documented historical resolutions and outcomes")
+    confidence_adjustment: float = Field(default=0.0, ge=-0.50, le=0.50, description="Bounded confidence delta [-0.50, +0.50] based on historical similarity")
+    recommendations: List[str] = Field(default_factory=list, description="Actionable recommendations grounded in historical outcomes")
+    provenance: str = Field(default="HISTORICAL", description="Strict provenance origin classification")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Dict[str, Any] = Field(default_factory=dict)

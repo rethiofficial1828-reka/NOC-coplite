@@ -26,6 +26,7 @@ from agents.trust.decision_explainer import DecisionExplainer
 from agents.trust.evidence_revalidator import EvidenceRevalidator
 from agents.trust.trust_models import (
     AutonomyDecision,
+    DecisionExplanationReport,
     DecisionFactor,
     DecisionLifecycleState,
     TrustAssessment,
@@ -191,3 +192,25 @@ class TrustService:
             )
 
             return decision
+
+    def explain_decision(
+        self,
+        target_entity: str,
+        trust_decision: Optional[TrustDecision] = None,
+        reasoning_result: Optional[ReasoningResult] = None,
+        path_decision_result: Optional[Any] = None,
+        topology_impact: Optional[Any] = None,
+        lineage: Optional[Any] = None,
+    ) -> DecisionExplanationReport:
+        """
+        Synthesize comprehensive, typed DecisionExplanationReport answering operator explainability inquiries.
+        """
+        with self._lock:
+            return self._explainer.generate_comprehensive_explanation(
+                target_entity=target_entity,
+                trust_decision=trust_decision,
+                reasoning_result=reasoning_result,
+                path_decision_result=path_decision_result,
+                topology_impact=topology_impact,
+                lineage=lineage,
+            )

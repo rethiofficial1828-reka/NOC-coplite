@@ -154,22 +154,65 @@ class ExecutionGraphModel(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
+class EvidenceProvenance(str, Enum):
+    """Controlled provenance origin category for evidence items."""
+
+    OBSERVED = "OBSERVED"
+    PREDICTED = "PREDICTED"
+    INFERRED = "INFERRED"
+    HISTORICAL = "HISTORICAL"
+    SIMULATION = "SIMULATION"
+
+
+class EvidenceRelationship(str, Enum):
+    """Relationship of evidence item to primary investigation conclusion."""
+
+    SUPPORTING = "SUPPORTING"
+    CONTRADICTING = "CONTRADICTING"
+    UNRESOLVED = "UNRESOLVED"
+    NEUTRAL = "NEUTRAL"
+
+
 class EvidenceReference(BaseModel):
     """Registered unit of evidence collected during an investigation."""
 
     model_config = ConfigDict(frozen=False)
 
     evidence_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    source_agent: str = Field(..., description="Agent that produced this evidence")
+    source_agent: str = Field(..., description="Agent or service that produced this evidence")
     evidence_type: str = Field(..., description="Evidence classification tag")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0, description="Evidence confidence score")
+    provenance: str = Field(default="OBSERVED", description="Controlled provenance label (OBSERVED, PREDICTED, INFERRED, HISTORICAL, SIMULATION)")
+    relationship: str = Field(default="SUPPORTING", description="Evidence relationship (SUPPORTING, CONTRADICTING, UNRESOLVED, NEUTRAL)")
     device_id: Optional[str] = Field(default=None)
+    affected_entity: Optional[str] = Field(default=None, description="Target entity or component affected")
+    linked_decision: Optional[str] = Field(default=None, description="Downstream conclusion or decision supported/affected")
+    summary: Optional[str] = Field(default=None, description="Human-readable factual summary of evidence")
     incident_id: Optional[str] = Field(default=None)
     topology_ref: Optional[Dict[str, Any]] = Field(default=None)
     runbook_ref: Optional[Dict[str, Any]] = Field(default=None)
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     payload: Dict[str, Any] = Field(default_factory=dict)
     parent_evidence_ids: List[str] = Field(default_factory=list, description="Lineage links")
+
+
+class InvestigationEvidenceLineage(BaseModel):
+    """Strongly-typed, read-only unified investigation evidence lineage report."""
+
+    model_config = ConfigDict(frozen=False)
+
+    investigation_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    target_entity: str = Field(..., description="Target device, interface, or incident entity")
+    evidence_count: int = Field(default=0, ge=0)
+    supporting_count: int = Field(default=0, ge=0)
+    contradicting_count: int = Field(default=0, ge=0)
+    unresolved_count: int = Field(default=0, ge=0)
+    top_contributors: List[Dict[str, Any]] = Field(default_factory=list, description="Aggregated metrics by producing agent")
+    timeline: List[EvidenceReference] = Field(default_factory=list, description="Chronological evidence items")
+    decision_linkages: List[Dict[str, Any]] = Field(default_factory=list, description="Linkages to downstream decisions")
+    why_this_decision: Dict[str, Any] = Field(default_factory=dict, description="Factual factor breakdown of the primary decision")
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ExecutionSummary(BaseModel):

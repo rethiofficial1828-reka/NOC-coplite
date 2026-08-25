@@ -5,7 +5,7 @@ Provides production-grade AI orchestration, abstract agent base classes,
 event bus, dependency injection container, thread-safe registry, and shared domain schemas.
 """
 
-__version__ = "1.0.0-rc1"
+__version__ = "1.1.0-rc1"
 
 from agents.base.base_agent import BaseAgent
 from agents.core.container import ServiceContainer
