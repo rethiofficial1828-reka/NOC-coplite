@@ -13,7 +13,10 @@ import numpy as np
 import requests
 import sqlite3
 import time
-from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT, DEVICE_REGISTRY, DEVICE_NAMES
+from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT, DEVICE_REGISTRY, DEVICE_NAMES, SITE_REGISTRY
+from agents.multi_site.command_center_service import MultiSiteCommandCenterService
+from agents.multi_site.site_inventory_service import MultiSiteInventoryService
+from agents.multi_site.multi_site_models import SiteHealthStatus, QueuePriority
 
 
 # ---------------------------------------------------------------------------
@@ -350,6 +353,57 @@ st.markdown("""
         line-height: 1.4;
     }
 
+    /* Multi-Site Command Center Styles (v1.3) */
+    .site-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    .site-card {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        transition: transform 0.2s, border-color 0.2s;
+    }
+    .site-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(129, 140, 248, 0.5);
+    }
+    .site-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .site-card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #f8fafc;
+    }
+    .site-badge-healthy  { background: rgba(5,150,105,0.2); color: #34d399; border: 1px solid rgba(52,211,153,0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .site-badge-degraded { background: rgba(217,119,6,0.2); color: #fbbf24; border: 1px solid rgba(251,191,36,0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .site-badge-critical { background: rgba(220,38,38,0.2); color: #f87171; border: 1px solid rgba(248,113,113,0.4); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+    .site-badge-offline  { background: rgba(100,116,139,0.2); color: #94a3b8; border: 1px solid rgba(148,163,184,0.3); padding: 3px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; }
+
+    .queue-card {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .priority-pill-critical { background: rgba(220,38,38,0.25); color: #fca5a5; border: 1px solid #ef4444; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
+    .priority-pill-high     { background: rgba(234,88,12,0.25); color: #fdba74; border: 1px solid #f97316; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
+    .priority-pill-medium   { background: rgba(202,138,4,0.25); color: #fde047; border: 1px solid #eab308; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
+    .priority-pill-low      { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid #3b82f6; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; }
+
     /* Device selector styling */
     div[data-testid="stSelectbox"] > div > div {
         background: rgba(15, 23, 42, 0.7) !important;
@@ -416,6 +470,9 @@ def fetch_risk(interface_name: str) -> dict | None:
 if "selected_device_name" not in st.session_state:
     st.session_state.selected_device_name = DEVICE_NAMES[-1]  # default: Branch3-Uplink
 
+if "ui_view_mode" not in st.session_state:
+    st.session_state.ui_view_mode = "COMMAND_CENTER"
+
 if "investigation_action_status" not in st.session_state:
     st.session_state.investigation_action_status = None
 
@@ -437,10 +494,24 @@ selected_device = next(
     DEVICE_REGISTRY[-1],
 )
 
+# Initialize Command Center Facade Service
+cmd_center_service = MultiSiteCommandCenterService()
+summary_state = cmd_center_service.build_summary_state()
+
 # ---------------------------------------------------------------------------
 # Sidebar: Navigation & Deterministic Demo Scenario Controller
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    st.header("🏛️ Console Navigation")
+    view_options = ["🏛️ Command Center", "🔬 Single-Incident Workbench"]
+    curr_view_idx = 0 if st.session_state.ui_view_mode == "COMMAND_CENTER" else 1
+    selected_nav = st.radio("Active View", view_options, index=curr_view_idx, key="sidebar_nav_mode_radio")
+    target_mode = "COMMAND_CENTER" if selected_nav.startswith("🏛️") else "DRILL_DOWN"
+    if target_mode != st.session_state.ui_view_mode:
+        st.session_state.ui_view_mode = target_mode
+        st.rerun()
+
+    st.write("---")
     st.header("⚙️ Fleet & Node Controls")
     sidebar_selected_device = st.selectbox("Select Branch / Router Node", options=DEVICE_NAMES, index=DEVICE_NAMES.index(st.session_state.selected_device_name))
     if sidebar_selected_device != st.session_state.selected_device_name:
@@ -476,31 +547,347 @@ with st.sidebar:
 
 
 # ---------------------------------------------------------------------------
-# STAGE 1: Header & Operating State
+# Tier-1 Command Center View vs Tier-2 Single-Incident Workbench
 # ---------------------------------------------------------------------------
-sim_mode_label = get_current_sim_mode().upper()
-st.markdown(f"""
-<div class="header-card">
-  <div style="flex:1;">
-    <div class="header-title">
-      Air-Gapped Predictive NOC Copilot
-      <span class="provenance-badge prov-dryrun">MODE: DRY_RUN</span>
-      <span class="provenance-badge prov-simulation">SIM: {sim_mode_label}</span>
-      <span class="provenance-badge prov-observed">OBSERVED</span>
-      <span class="provenance-badge prov-predicted">PREDICTED</span>
-      <span class="provenance-badge prov-inferred">INFERRED</span>
-      <span class="provenance-badge prov-historical">HISTORICAL</span>
+if st.session_state.ui_view_mode == "COMMAND_CENTER":
+    sim_mode_label = get_current_sim_mode().upper()
+    st.markdown(f"""
+    <div class="header-card">
+      <div style="flex:1;">
+        <div class="header-title">
+          Multi-Site NOC Command Center
+          <span class="provenance-badge prov-dryrun">MODE: DRY_RUN</span>
+          <span class="provenance-badge prov-simulation">SIM: {sim_mode_label}</span>
+          <span class="provenance-badge prov-observed">MULTI-SITE</span>
+          <span class="provenance-badge prov-predicted">PREDICTIVE</span>
+        </div>
+        <div class="header-subtitle">Unified Enterprise Multi-Site Fleet Observability & Prioritized Incident Command Center</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <div class="copilot-badge">
+          🛡️ <strong>Air-Gapped Copilot v1.3</strong>
+        </div>
+        <div class="device-badge-type">{summary_state.total_sites} Sites Configured · 0 Outbound Dep</div>
+      </div>
     </div>
-    <div class="header-subtitle">Unified Incident Investigation & Mitigation Operator Workflow — Zero Outbound Dependency</div>
-  </div>
-  <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
-    <div class="device-badge">
-      📡 <strong>{selected_device['name']}</strong>
+    """, unsafe_allow_html=True)
+
+    # Operator Safety Visibility Strip
+    st.markdown("""
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <span class="provenance-badge prov-dryrun" style="font-size:0.75rem;">🛡️ SAFETY: DRY_RUN ENFORCED</span>
+      <span class="provenance-badge prov-observed" style="font-size:0.75rem;">🔒 LAB_AUTHORIZED TARGET BOUNDARIES</span>
+      <span class="provenance-badge prov-predicted" style="font-size:0.75rem;">✋ HUMAN APPROVAL MANDATORY</span>
+      <span class="provenance-badge" style="background:rgba(239,68,68,0.15); border-color:#f87171; color:#fca5a5; font-size:0.75rem;">🚫 NO AUTONOMOUS MULTI-SITE MUTATION</span>
     </div>
-    <div class="device-badge-type">{selected_device['type']} · {selected_device['location']}</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+    # 1. Executive Fleet Health Status Strip (7 Pillars)
+    st.markdown(f"""
+    <div class="status-strip" style="grid-template-columns: repeat(7, 1fr);">
+      <div class="status-item">
+        <div class="status-label">Total Sites</div>
+        <div class="status-value">{summary_state.total_sites}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Healthy Sites</div>
+        <div class="status-value" style="color:#34d399;">{summary_state.healthy_sites}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Degraded Sites</div>
+        <div class="status-value" style="color:#fbbf24;">{summary_state.degraded_sites}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Critical Sites</div>
+        <div class="status-value" style="color:#f87171;">{summary_state.critical_sites}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Offline Sites</div>
+        <div class="status-value" style="color:#94a3b8;">{summary_state.offline_sites}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Active Incidents</div>
+        <div class="status-value">{summary_state.total_active_incidents}</div>
+      </div>
+      <div class="status-item">
+        <div class="status-label">Critical Incidents</div>
+        <div class="status-value" style="color:#f87171;">{summary_state.critical_active_incidents}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 5. Interactive Filtering & Search Bar
+    with st.expander("🔍 Filter & Search Command Center Fleet & Incidents", expanded=True):
+        f_col1, f_col2, f_col3, f_col4 = st.columns(4)
+        with f_col1:
+            search_query = st.text_input("Search Text", placeholder="ID, Title, Device, Interface...", key="filter_search_text")
+            filter_priority = st.selectbox("Priority Tier", ["ALL", "CRITICAL", "HIGH", "MEDIUM", "LOW"], key="filter_priority_tier")
+        with f_col2:
+            site_options = ["ALL"] + [s.site_id for s in summary_state.sites]
+            filter_site = st.selectbox("Filter Site", site_options, key="filter_site_select")
+            filter_health = st.selectbox("Site Health", ["ALL", "HEALTHY", "DEGRADED", "CRITICAL", "OFFLINE"], key="filter_health_select")
+        with f_col3:
+            filter_state = st.selectbox("Incident State", ["ALL", "NEW", "OPEN", "IN_PROGRESS", "ACKNOWLEDGED"], key="filter_state_select")
+            filter_corr = st.selectbox("Correlation Filter", ["ALL", "CORRELATED ONLY", "UNCORRELATED ONLY"], key="filter_corr_select")
+        with f_col4:
+            filter_provider = st.selectbox("Provider Filter", ["ALL", "ISP-A", "ISP-B"], key="filter_provider_select")
+
+    # 2. Site Fleet Grid (Filtered)
+    st.subheader("📍 Multi-Site Fleet Inventory & WAN Uplink Status")
+    displayed_sites = summary_state.sites
+    if filter_site != "ALL":
+        displayed_sites = [s for s in displayed_sites if s.site_id == filter_site]
+    if filter_health != "ALL":
+        displayed_sites = [s for s in displayed_sites if s.health_status.value == filter_health]
+    if filter_provider != "ALL":
+        displayed_sites = [s for s in displayed_sites if filter_provider in s.primary_providers or filter_provider in s.backup_providers]
+
+    if displayed_sites:
+        cols = st.columns(len(displayed_sites))
+        for idx, site in enumerate(displayed_sites):
+            with cols[idx]:
+                badge_class = {
+                    SiteHealthStatus.HEALTHY: "site-badge-healthy",
+                    SiteHealthStatus.DEGRADED: "site-badge-degraded",
+                    SiteHealthStatus.CRITICAL: "site-badge-critical",
+                    SiteHealthStatus.OFFLINE: "site-badge-offline",
+                }.get(site.health_status, "site-badge-healthy")
+
+                st.markdown(f"""
+                <div class="site-card">
+                  <div class="site-card-header">
+                    <span class="site-card-title">{site.site_name}</span>
+                    <span class="{badge_class}">{site.health_status.value}</span>
+                  </div>
+                  <div style="font-size:0.75rem; color:#94a3b8; margin-bottom:6px;">
+                    🏢 {site.site_type.value} · 📍 {site.location}
+                  </div>
+                  <div style="font-size:0.80rem; margin-bottom:4px;">
+                    <strong>Devices:</strong> {', '.join(site.device_ids)}
+                  </div>
+                  <div style="font-size:0.80rem; margin-bottom:4px;">
+                    <strong>ISPs:</strong> Primary: {', '.join(site.primary_providers)} | Backup: {', '.join(site.backup_providers)}
+                  </div>
+                  <div style="font-size:0.78rem; color:#cbd5e1; margin-top:6px;">
+                    Avg Latency: <strong>{site.average_latency_ms}ms</strong> · Loss: <strong>{site.average_loss_percent}%</strong>
+                  </div>
+                  <div style="font-size:0.80rem; font-weight:700; color:{'#f87171' if site.active_incidents_count > 0 else '#34d399'}; margin-top:6px;">
+                    Active Incidents: {site.active_incidents_count} ({site.critical_incidents_count} Critical)
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"🔍 Inspect Site", key=f"btn_inspect_site_{site.site_id}", width="stretch"):
+                    if site.device_ids:
+                        dev_match = next((d["name"] for d in DEVICE_REGISTRY if d["id"] in site.device_ids or d["name"] in site.device_ids), site.device_ids[0])
+                        st.session_state.selected_device_name = dev_match
+                    st.session_state.selected_site_id = site.site_id
+                    st.session_state.ui_view_mode = "DRILL_DOWN"
+                    st.rerun()
+    else:
+        st.info("No sites match the specified filter criteria.")
+
+    st.write("---")
+
+    # 3. Correlated Incident Panel (Filtered)
+    st.subheader("🔗 Cross-Site Correlated Incident Groups")
+    st.caption("Deterministic multi-dimensional correlation (Shared Upstream ISP, Topology Transit Dependency, Temporal Coincidence).")
+
+    displayed_groups = summary_state.correlated_groups
+    if filter_site != "ALL":
+        displayed_groups = [g for g in displayed_groups if filter_site in g.affected_site_ids]
+    if filter_provider != "ALL":
+        displayed_groups = [g for g in displayed_groups if filter_provider.upper() in g.shared_dependency.upper()]
+    if search_query:
+        sq = search_query.lower()
+        displayed_groups = [
+            g for g in displayed_groups
+            if sq in g.group_id.lower() or sq in g.title.lower() or sq in g.shared_dependency.lower()
+        ]
+
+    if displayed_groups:
+        for grp in displayed_groups:
+            c_badge_color = {
+                "SHARED_PROVIDER": "#38bdf8",
+                "SHARED_TOPOLOGY_DEPENDENCY": "#818cf8",
+                "SIMILAR_FAILURE_SIGNATURE": "#f59e0b",
+                "SYNCHRONIZED_TEMPORAL": "#34d399",
+            }.get(grp.correlation_type.value, "#38bdf8")
+
+            g_col1, g_col2 = st.columns([5, 1])
+            with g_col1:
+                ev_str = f"Supporting Evidence: {', '.join(grp.supporting_evidence_ids)}" if grp.supporting_evidence_ids else "Evidence: Telemetry + Incident Signals"
+                contra_str = f" | Contradicting: {', '.join(grp.contradicting_evidence_ids)}" if grp.contradicting_evidence_ids else ""
+                st.markdown(f"""
+                <div class="copilot-card" style="border-left: 4px solid {c_badge_color}; margin-bottom: 10px; padding: 14px 18px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <div style="font-weight:700; font-size:1.0rem; color:#f8fafc;">
+                      🔗 {grp.title}
+                    </div>
+                    <div>
+                      <span class="copilot-badge" style="border-color:{c_badge_color}; color:{c_badge_color};">
+                        {grp.correlation_type.value}
+                      </span>
+                      <span class="copilot-badge" style="border-color:#34d399; color:#34d399; margin-left:6px;">
+                        Confidence: {grp.correlation_confidence*100:.0f}%
+                      </span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.82rem; color:#cbd5e1; margin-bottom:6px;">
+                    {grp.description}
+                  </div>
+                  <div style="font-size:0.78rem; color:#94a3b8;">
+                    <strong>Affected Sites:</strong> {', '.join(grp.affected_site_ids)} | <strong>Shared Dependency:</strong> <span style="color:#f59e0b;">{grp.shared_dependency}</span> | <strong>Incidents:</strong> {', '.join(grp.incident_ids)}
+                  </div>
+                  <div style="font-size:0.75rem; color:#64748b; margin-top:4px;">
+                    🔬 {ev_str}{contra_str}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+            with g_col2:
+                if st.button("⚡ Investigate Group", key=f"btn_grp_{grp.group_id}", width="stretch"):
+                    if grp.affected_devices:
+                        target_dev = grp.affected_devices[0]
+                        dev_match = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == target_dev or d["name"] == target_dev), target_dev)
+                        st.session_state.selected_device_name = dev_match
+                    if grp.affected_site_ids:
+                        st.session_state.selected_site_id = grp.affected_site_ids[0]
+                    st.session_state.selected_group_id = grp.group_id
+                    st.session_state.ui_view_mode = "DRILL_DOWN"
+                    st.rerun()
+    else:
+        st.markdown("""
+        <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:12px; font-size:0.82rem; color:#94a3b8; text-align:center;">
+          ℹ️ No cross-site root cause correlations match the filter criteria.
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("---")
+
+    # 4. Prioritized Operator Work Queue (Filtered & Deterministically Ordered)
+    st.subheader("📋 OPERATOR WORK QUEUE")
+    st.caption("Deterministic multi-factor prioritization ($0.30 \\cdot S + 0.25 \\cdot R + 0.20 \\cdot B + 0.15 \\cdot U_{\\text{TTI}} + 0.10 \\cdot C$). Advisory queue order only — execution strictly guarded by 16 safety prechecks.")
+
+    displayed_queue = summary_state.work_queue
+    if filter_priority != "ALL":
+        displayed_queue = [q for q in displayed_queue if q.priority.value == filter_priority]
+    if filter_site != "ALL":
+        displayed_queue = [q for q in displayed_queue if q.site_id == filter_site]
+    if filter_state != "ALL":
+        displayed_queue = [q for q in displayed_queue if q.status.value == filter_state]
+    if filter_corr == "CORRELATED ONLY":
+        displayed_queue = [q for q in displayed_queue if q.correlated_group_id is not None]
+    elif filter_corr == "UNCORRELATED ONLY":
+        displayed_queue = [q for q in displayed_queue if q.correlated_group_id is None]
+    if search_query:
+        sq = search_query.lower()
+        displayed_queue = [
+            q for q in displayed_queue
+            if sq in q.incident_id.lower() or sq in q.title.lower() or sq in q.device_id.lower() or sq in q.interface.lower() or sq in q.site_name.lower()
+        ]
+
+    # Limit to 50 for memory responsiveness
+    MAX_QUEUE_DISPLAY = 50
+    display_subset = displayed_queue[:MAX_QUEUE_DISPLAY]
+
+    if display_subset:
+        for q_item in display_subset:
+            pill_class = {
+                QueuePriority.CRITICAL: "priority-pill-critical",
+                QueuePriority.HIGH: "priority-pill-high",
+                QueuePriority.MEDIUM: "priority-pill-medium",
+                QueuePriority.LOW: "priority-pill-low",
+            }.get(q_item.priority, "priority-pill-medium")
+
+            tti_str = f"{q_item.time_to_impact_sec:.0f}s" if q_item.time_to_impact_sec > 0 else "N/A"
+            corr_badge = f'<span class="copilot-badge" style="border-color:#38bdf8; color:#38bdf8; font-size:0.70rem; margin-left:6px;">🔗 CORRELATED</span>' if q_item.correlated_group_id else ''
+
+            q_col1, q_col2 = st.columns([5, 1])
+            with q_col1:
+                st.markdown(f"""
+                <div class="queue-card">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <span class="{pill_class}">{q_item.priority.value} ({q_item.priority_score:.2f})</span>
+                    <div>
+                      <div style="font-weight:700; font-size:0.95rem; color:#f1f5f9;">
+                        {q_item.incident_id}: {q_item.title} {corr_badge}
+                      </div>
+                      <div style="font-size:0.78rem; color:#94a3b8; margin-top:2px;">
+                        📍 <strong>{q_item.site_name}</strong> ({q_item.site_id}) · 📡 <strong>{q_item.device_id}</strong> ({q_item.interface}) · Risk: <strong>{q_item.risk_score*100:.0f}%</strong> · Blast: <strong>{q_item.blast_radius_severity.value}</strong> · TTI: <strong>{tti_str}</strong> · State: <strong>{q_item.status.value}</strong>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="font-size:0.75rem; color:#f59e0b; text-align:right;">
+                    🔒 {q_item.trust_requirement}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+            with q_col2:
+                if st.button("⚡ Investigate", key=f"btn_q_{q_item.incident_id}", width="stretch"):
+                    dev_match = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == q_item.device_id or d["name"] == q_item.device_id), q_item.device_id)
+                    st.session_state.selected_device_name = dev_match
+                    st.session_state.selected_incident_id = q_item.incident_id
+                    st.session_state.selected_site_id = q_item.site_id
+                    st.session_state.ui_view_mode = "DRILL_DOWN"
+                    st.rerun()
+
+        if len(displayed_queue) > MAX_QUEUE_DISPLAY:
+            st.caption(f"Showing top {MAX_QUEUE_DISPLAY} of {len(displayed_queue)} prioritized queue items.")
+    else:
+        st.markdown("""
+        <div style="background:rgba(5,150,105,0.1); border:1px solid rgba(52,211,153,0.3); border-radius:10px; padding:16px; text-align:center; color:#34d399; font-weight:600;">
+          🟢 All monitored sites and WAN links operating within nominal thresholds. 0 incidents matching filter criteria.
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.write("---")
+    st.info("💡 **Operator Guidance**: Select any site card or queue item above to open the Single-Incident Investigation & Mitigation Workbench.")
+
+else:
+    # ---------------------------------------------------------------------------
+    # 7. Breadcrumb Bar & 8. Return Navigation for Drill-Down View
+    # ---------------------------------------------------------------------------
+    site_for_dev = cmd_center_service.inventory_service.get_site_for_device(selected_device["name"]) or cmd_center_service.inventory_service.get_site_for_device(selected_device["id"])
+    site_label = site_for_dev.site_name if site_for_dev else "Campus"
+    inc_label = getattr(st.session_state, "selected_incident_id", "Live Session")
+
+    b_col1, b_col2 = st.columns([5, 1])
+    with b_col1:
+        st.markdown(f"""
+        <div style="font-size:0.90rem; color:#94a3b8; margin-bottom:12px; padding:6px 0;">
+          🏛️ <strong>Command Center</strong> &gt; 📍 <strong>{site_label}</strong> &gt; 📡 <strong style="color:#38bdf8;">{selected_device['name']}</strong> &gt; 🔬 <strong style="color:#f59e0b;">{inc_label}</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    with b_col2:
+        if st.button("← Return to Command Center", width="stretch", key="btn_return_cmd_center"):
+            st.session_state.ui_view_mode = "COMMAND_CENTER"
+            st.rerun()
+
+    # ---------------------------------------------------------------------------
+    # STAGE 1: Header & Operating State
+    # ---------------------------------------------------------------------------
+    sim_mode_label = get_current_sim_mode().upper()
+    st.markdown(f"""
+    <div class="header-card">
+      <div style="flex:1;">
+        <div class="header-title">
+          Air-Gapped Predictive NOC Copilot
+          <span class="provenance-badge prov-dryrun">MODE: DRY_RUN</span>
+          <span class="provenance-badge prov-simulation">SIM: {sim_mode_label}</span>
+          <span class="provenance-badge prov-observed">OBSERVED</span>
+          <span class="provenance-badge prov-predicted">PREDICTED</span>
+          <span class="provenance-badge prov-inferred">INFERRED</span>
+          <span class="provenance-badge prov-historical">HISTORICAL</span>
+        </div>
+        <div class="header-subtitle">Unified Incident Investigation & Mitigation Operator Workflow — Zero Outbound Dependency</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+        <div class="device-badge">
+          📡 <strong>{selected_device['name']}</strong>
+        </div>
+        <div class="device-badge-type">{selected_device['type']} · {selected_device['location']}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------

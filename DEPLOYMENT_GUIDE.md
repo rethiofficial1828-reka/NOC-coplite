@@ -1,6 +1,6 @@
 # NOC Copilot — Production Deployment Guide
 
-**Version**: v1.2.0-rc1
+**Version**: v1.3.0-rc1
 
 This guide describes the installation, air-gapped deployment, network setup, hardware configuration, and service verification procedure for NOC Copilot.
 

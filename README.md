@@ -2,18 +2,27 @@
 
 An AI-powered Network Operations Center copilot that predicts network failures before they happen and provides topology-aware incident intelligence, evidence-grounded remediation, explainable decisioning, historical pattern intelligence, closed-loop adaptive learning, and air-gapped federated intelligence — fully air-gapped, zero cloud dependencies.
 
-![Version](https://img.shields.io/badge/Version-v1.2.0--rc1-blue)
+![Version](https://img.shields.io/badge/Version-v1.3.0--rc1-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![XGBoost](https://img.shields.io/badge/ML-XGBoost-orange)
 ![Streamlit](https://img.shields.io/badge/UI-Streamlit-red)
-![Tests](https://img.shields.io/badge/Tests-19%2C418%20Passing-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-19%2C488%20Passing-brightgreen)
+![Multi-Site](https://img.shields.io/badge/Multi--Site-Command%20Center%20Operational-brightgreen)
 ![Live Lab](https://img.shields.io/badge/ContainerLab-FRRouting%20Verified-brightgreen)
 ![Golden](https://img.shields.io/badge/Golden%20Scenario-13%2F13%20Passing-success)
 ![Chaos](https://img.shields.io/badge/Chaos%20Validation-10%2F10%20Passed-success)
 
-## 🌟 NOC-Copilot v1.1 Intelligence Capabilities
+## 🌟 NOC-Copilot v1.3 Multi-Site Command Center Capabilities
 
-NOC-Copilot v1.1 introduces a 5-phase intelligence architecture unified in an end-to-end **Golden Incident Scenario**:
+NOC-Copilot v1.3 introduces an enterprise **Tier-1 Multi-Site NOC Command Center** layered atop the audited v1.2 real network failover pipeline:
+
+1. **Multi-Site Fleet Observability**: Executive 7-pillar fleet health strip (`Total Sites`, `Healthy`, `Degraded`, `Critical`, `Offline`, `Active Incidents`, `Critical Incidents`) and WAN uplink grid across all enterprise sites.
+2. **Deterministic Cross-Site Incident Correlation**: Multi-dimensional root cause correlation across 4 orthogonal dimensions (`SHARED_PROVIDER`, `SHARED_TOPOLOGY_DEPENDENCY`, `SIMILAR_FAILURE_SIGNATURE`, `SYNCHRONIZED_TEMPORAL`) with exact evidence provenance.
+3. **Mathematical Operator Work Queue Prioritization**: Deterministic multi-factor incident ranking:
+   $$\text{Priority Score} = 0.30 \cdot S_{\text{sev}} + 0.25 \cdot R_{\text{risk}} + 0.20 \cdot B_{\text{blast}} + 0.15 \cdot U_{\text{tti}} + 0.10 \cdot C_{\text{corr}}$$
+4. **Interactive Multi-Factor Fleet Filtering**: High-speed filtering by priority tier, site, health status, incident state, correlation cluster, upstream ISP, and full-text search.
+5. **Context-Preserving Drill-Down & Return Navigation**: 1-click drill-down preserving device, incident, site, and correlation context into the single-incident investigation workbench, with full breadcrumbs.
+6. **Multi-Incident Concurrency & Isolation**: Proven operational hardening across up to 500 simultaneous incidents with strict single-target mutation isolation and zero cross-incident side effects.
 
 1. **Topology-Aware Incident Intelligence (Phase 1)**: Real-time graph traversal, BFS blast-radius calculation, downstream device impact percentages, and single points of failure (SPOF) identification.
 2. **Evidence-Centric Cross-Agent Investigation (Phase 2)**: Read-only unified evidence lineage tracking cross-agent contributions with strict provenance (`OBSERVED`, `PREDICTED`, `INFERRED`, `HISTORICAL`, `SIMULATION`).

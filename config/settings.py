@@ -3,7 +3,7 @@ import os
 # Project root directory (parent directory of config package)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = "1.2.0-rc1"
+VERSION = "1.3.0-rc1"
 __version__ = VERSION
 
 # Key directories
@@ -65,6 +65,49 @@ DEVICE_REGISTRY = [
 
 # Convenience: ordered list of interface names (matches DB "interface" column)
 DEVICE_NAMES = [d["name"] for d in DEVICE_REGISTRY]
+
+# ---------------------------------------------------------------------------
+# Site Registry (v1.3) — Hierarchical physical and logical site grouping.
+# Maps constituent device IDs and interfaces into manageable operational sites.
+# ---------------------------------------------------------------------------
+SITE_REGISTRY = [
+    {
+        "site_id": "site-campus",
+        "site_name": "Campus Main Site",
+        "site_type": "CAMPUS",
+        "location": "Main Campus",
+        "device_ids": ["core-01", "rtr-01"],
+        "primary_providers": ["ISP-A"],
+        "backup_providers": ["ISP-B"],
+    },
+    {
+        "site_id": "site-dc",
+        "site_name": "Data Center HQ",
+        "site_type": "DATACENTER",
+        "location": "Data Center",
+        "device_ids": ["fw-01", "hub"],
+        "primary_providers": ["ISP-B"],
+        "backup_providers": ["ISP-A"],
+    },
+    {
+        "site_id": "site-branch3",
+        "site_name": "Branch Office 3",
+        "site_type": "BRANCH",
+        "location": "Branch Office",
+        "device_ids": ["branch3-uplink"],
+        "primary_providers": ["ISP-A"],
+        "backup_providers": ["ISP-B"],
+    },
+    {
+        "site_id": "site-branch1",
+        "site_name": "Branch Office 1",
+        "site_type": "BRANCH",
+        "location": "Branch 1",
+        "device_ids": ["branch1"],
+        "primary_providers": ["ISP-A"],
+        "backup_providers": ["ISP-B"],
+    },
+]
 
 # ---------------------------------------------------------------------------
 # Network Control-Plane Configuration (v1.2)

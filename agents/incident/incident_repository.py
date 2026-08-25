@@ -388,6 +388,20 @@ class IncidentRepository:
                 logger.error(f"Error querying incidents by status '{status.value}': {e}", exc_info=True)
                 raise ExecutionError(f"Failed to query incidents by status '{status.value}': {e}") from e
 
+    def get_all_incidents(self, limit: int = 100) -> List[IncidentRecord]:
+        """Fetch all incidents ordered by created_at descending."""
+        query = "SELECT * FROM incidents ORDER BY created_at DESC LIMIT ?"
+        with self._lock:
+            try:
+                with self._get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute(query, (limit,))
+                    rows = cursor.fetchall()
+                    return [self._row_to_record(r) for r in rows]
+            except Exception as e:
+                logger.error(f"Error querying all incidents: {e}", exc_info=True)
+                raise ExecutionError(f"Failed to query all incidents: {e}") from e
+
     def get_timeline(self, incident_id: str) -> List[IncidentTimeline]:
         """Fetch all timeline audit events for an incident."""
         query = "SELECT * FROM incident_timeline WHERE incident_id = ? ORDER BY timestamp ASC"

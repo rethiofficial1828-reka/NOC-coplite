@@ -173,6 +173,10 @@ class IncidentService:
         """Fetch incident by ID."""
         return self._repository.get_incident(incident_id)
 
+    def get_all_incidents(self, limit: int = 100) -> List[IncidentRecord]:
+        """Fetch all incidents ordered by created_at descending."""
+        return self._repository.get_all_incidents(limit=limit)
+
     def transition_incident_status(
         self, incident_id: str, target_status: IncidentStatus, reason: str = "", author: str = "User"
     ) -> IncidentRecord:
