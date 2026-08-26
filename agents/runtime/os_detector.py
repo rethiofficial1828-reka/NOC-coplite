@@ -8,6 +8,7 @@ runtime indicators without platform-specific hardcoding.
 
 import os
 import platform
+import subprocess
 import sys
 from typing import Dict, Tuple
 
@@ -116,8 +117,10 @@ class OSDetector:
         # Windows WMI / System info check
         if platform.system() == "Windows":
             try:
-                import subprocess
-                out = subprocess.check_output("wmic baseboard get manufacturer,product", shell=True).decode().lower()
+                out = subprocess.check_output(
+                    ["wmic", "baseboard", "get", "manufacturer,product"],
+                    shell=False,
+                ).decode().lower()
                 if "virtualbox" in out or "innotek" in out:
                     return VirtualizationEnvironment.VIRTUALBOX, True
                 elif "vmware" in out:

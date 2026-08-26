@@ -3,7 +3,7 @@ import os
 # Project root directory (parent directory of config package)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = "1.3.0-rc1"
+VERSION = "1.4.0-rc1"
 __version__ = VERSION
 
 # Key directories
@@ -115,3 +115,7 @@ SITE_REGISTRY = [
 LAB_CONTROL_PLANE = os.getenv("NOC_LAB_CONTROL_PLANE", "none")
 SUPPORTED_CONTROL_PLANES = ["none", "gnmi", "netconf", "frr_zapi"]
 
+# ---------------------------------------------------------------------------
+# Production Authorization & Safety Invariants (v1.4)
+# ---------------------------------------------------------------------------
+PRODUCTION_AUTHORIZED = False

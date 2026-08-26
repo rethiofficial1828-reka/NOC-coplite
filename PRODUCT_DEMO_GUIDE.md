@@ -1,6 +1,6 @@
 # NOC Copilot — Operator Demonstration Guide
 
-**Version**: v1.3.0-rc1
+**Version**: v1.4.0-rc1
 
 This guide provides step-by-step instructions for conducting an executive or operator demonstration of NOC Copilot.
 

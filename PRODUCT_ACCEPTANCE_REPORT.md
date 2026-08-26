@@ -1,8 +1,8 @@
 # NOC Copilot — Product Acceptance Report
 
 **Product**: Air-Gapped Enterprise Predictive NOC Copilot
-**Product Version**: 1.3.0-rc1
-**Branch**: `develop/v1.3`
+**Product Version**: 1.4.0-rc1
+**Branch**: `develop/v1.4`
 **Acceptance Date**: 2026-08-25
 **Environment**: Linux x86_64 (ContainerLab 0.79.0 / Docker / FRRouting 8.4)
 **Acceptance Classification**: `LAB_PROVEN / MULTI_SITE_OPERATIONAL / PRODUCTION_CONTROL_PLANE_PENDING`

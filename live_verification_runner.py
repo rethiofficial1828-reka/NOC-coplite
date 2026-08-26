@@ -7,6 +7,7 @@ Results written to: data/LIVE_VERIFICATION_RESULTS.txt
 import io
 import json
 import os
+import shlex
 import subprocess
 import sys
 import time
@@ -67,15 +68,23 @@ def run_suite(name, stream):
                 'skip': 0, 'status': f'ERROR: {ex}', 'time': round(elapsed, 3)}
 
 
-def run_script(label, cmd, stream, timeout=60):
+def run_script(label, cmd, stream, timeout=60, env=None):
     stream.write(f'\n{DIVIDER}\n')
     stream.write(f'SCRIPT: {label}\n')
-    stream.write(f'CMD: {cmd}\n')
+    cmd_display = ' '.join(cmd) if isinstance(cmd, list) else str(cmd)
+    stream.write(f'CMD: {cmd_display}\n')
     stream.write(f'{DIVIDER}\n')
     t0 = time.perf_counter()
+    run_env = {**os.environ, 'PYTHONPATH': ROOT}
+    if env:
+        run_env.update(env)
+    if isinstance(cmd, str):
+        args = shlex.split(cmd)
+    else:
+        args = list(cmd)
     try:
         proc = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
+            args, shell=False, env=run_env, capture_output=True, text=True,
             timeout=timeout, cwd=ROOT
         )
         elapsed = time.perf_counter() - t0
@@ -132,7 +141,7 @@ with open(OUT_FILE, 'w', encoding='utf-8') as out:
         venv_py = sys.executable
     run_script(
         'run.py --check-only',
-        f'PYTHONPATH={ROOT} {venv_py} {ROOT}/run.py --check-only',
+        [venv_py, os.path.join(ROOT, 'run.py'), '--check-only'],
         out,
         timeout=30
     )
@@ -141,7 +150,7 @@ with open(OUT_FILE, 'w', encoding='utf-8') as out:
     # ── 8. Realistic E2E Demo ─────────────────────────────────────────────────
     run_script(
         'run_realistic_simulation_demo.py',
-        f'PYTHONPATH={ROOT} {venv_py} {ROOT}/tests/run_realistic_simulation_demo.py',
+        [venv_py, os.path.join(ROOT, 'tests', 'run_realistic_simulation_demo.py')],
         out,
         timeout=120
     )
@@ -150,7 +159,7 @@ with open(OUT_FILE, 'w', encoding='utf-8') as out:
     # ── 9. Full 10000 matrix runner ───────────────────────────────────────────
     run_script(
         'run_10000_validation_matrix.py',
-        f'PYTHONPATH={ROOT} {venv_py} {ROOT}/tests/run_10000_validation_matrix.py',
+        [venv_py, os.path.join(ROOT, 'tests', 'run_10000_validation_matrix.py')],
         out,
         timeout=300
     )

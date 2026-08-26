@@ -2,7 +2,7 @@
 
 An AI-powered Network Operations Center copilot that predicts network failures before they happen and provides topology-aware incident intelligence, evidence-grounded remediation, explainable decisioning, historical pattern intelligence, closed-loop adaptive learning, and air-gapped federated intelligence — fully air-gapped, zero cloud dependencies.
 
-![Version](https://img.shields.io/badge/Version-v1.3.0--rc1-blue)
+![Version](https://img.shields.io/badge/Version-v1.4.0--rc1-blue)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![XGBoost](https://img.shields.io/badge/ML-XGBoost-orange)
 ![Streamlit](https://img.shields.io/badge/UI-Streamlit-red)
