@@ -13,7 +13,7 @@ import numpy as np
 import requests
 import sqlite3
 import time
-from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT, DEVICE_REGISTRY, DEVICE_NAMES, SITE_REGISTRY
+from config.settings import DB_PATH, ENGINE_PORT, COPILOT_PORT, DEVICE_REGISTRY, DEVICE_NAMES, SITE_REGISTRY, WAN_PROVIDER_REGISTRY
 from agents.multi_site.command_center_service import MultiSiteCommandCenterService
 from agents.multi_site.site_inventory_service import MultiSiteInventoryService
 from agents.multi_site.multi_site_models import SiteHealthStatus, QueuePriority
@@ -630,7 +630,8 @@ if st.session_state.ui_view_mode == "COMMAND_CENTER":
             filter_state = st.selectbox("Incident State", ["ALL", "NEW", "OPEN", "IN_PROGRESS", "ACKNOWLEDGED"], key="filter_state_select")
             filter_corr = st.selectbox("Correlation Filter", ["ALL", "CORRELATED ONLY", "UNCORRELATED ONLY"], key="filter_corr_select")
         with f_col4:
-            filter_provider = st.selectbox("Provider Filter", ["ALL", "ISP-A", "ISP-B"], key="filter_provider_select")
+            _all_provider_ids = ["ALL"] + [p["provider_id"] for p in WAN_PROVIDER_REGISTRY]
+            filter_provider = st.selectbox("Provider Filter", _all_provider_ids, key="filter_provider_select")
 
     # 2. Site Fleet Grid (Filtered)
     st.subheader("📍 Multi-Site Fleet Inventory & WAN Uplink Status")
@@ -948,7 +949,18 @@ incident_state_val = active_incident_record.status.value if active_incident_reco
 trust_score_val = 0.52
 blast_radius_val = "HIGH" if current_risk_score >= 0.3 else "LOW"
 autonomy_dec_val = "HUMAN_APPROVAL_REQUIRED" if current_risk_score >= 0.3 else "AUTONOMOUS_EXECUTION_PERMITTED"
-recommended_prov_val = "ISP-B" if current_risk_score >= 0.3 else "ISP-A"
+
+# Attempt to get recommended provider from actual PathDecisionResult (v1.5)
+_path_res_early = None
+try:
+    from agents.path_decision import PathDecisionService as _PDS
+    _path_res_early = _PDS().evaluate_path_decision(selected_name)
+    if _path_res_early and _path_res_early.recommendation and _path_res_early.recommendation.recommended_provider:
+        recommended_prov_val = _path_res_early.recommendation.recommended_provider
+    else:
+        recommended_prov_val = "ISP-B" if current_risk_score >= 0.3 else "ISP-A"
+except Exception:
+    recommended_prov_val = "ISP-B" if current_risk_score >= 0.3 else "ISP-A"
 
 
 # ---------------------------------------------------------------------------
@@ -1530,22 +1542,42 @@ with col_info:
 
             # Path Comparison Table
             if path_res.scores and path_res.evaluations:
-                st.markdown('<div class="copilot-section-title">Candidate Provider Comparison</div>', unsafe_allow_html=True)
+                # v1.5: build provider role map from WAN_PROVIDER_REGISTRY + scores
+                _phys_providers = {p["provider_id"] for p in WAN_PROVIDER_REGISTRY if not p.get("is_simulated", False)}
+                _sim_providers  = {p["provider_id"] for p in WAN_PROVIDER_REGISTRY if p.get("is_simulated", False)}
+                _prov_meta      = {p["provider_id"]: p for p in WAN_PROVIDER_REGISTRY}
+
+                st.markdown('<div class="copilot-section-title">All-Provider Comparison (v1.5 Four-Provider Intelligence)</div>', unsafe_allow_html=True)
                 comp_rows = []
                 eval_map = {e.path_id: e for e in path_res.evaluations}
                 for s in path_res.scores:
                     ev = eval_map.get(s.path_id)
+                    pname = s.provider_name
+                    is_sim = pname in _sim_providers
+                    # Determine provider role badge
+                    if pname == rec.current_provider:
+                        role_badge = "🟢 ACTIVE"
+                    elif pname == rec.recommended_provider and pname != rec.current_provider:
+                        role_badge = "🎯 RECOMMENDED"
+                    elif not is_sim:
+                        role_badge = "🔵 BACKUP (Physical)"
+                    else:
+                        role_badge = "⚪ SIMULATED"
+                    # Physical/Simulated classification
+                    exec_class = "🔒 SIMULATED (Decision-Only)" if is_sim else "⚡ PHYSICAL"
                     comp_rows.append({
-                        "Rank": s.rank,
-                        "Provider": s.provider_name,
-                        "Score": f"{s.total_score:.1f}/100",
-                        "Health": f"{ev.health:.1f}" if ev else "—",
-                        "Latency": f"{ev.latency_ms:.1f} ms" if ev else "—",
-                        "Loss": f"{ev.packet_loss_percent:.2f}%" if ev else "—",
-                        "Risk": f"{ev.failure_risk*100:.0f}%" if ev else "—",
-                        "SLA": ev.sla_status.value if ev else "—",
+                        "Rank":      s.rank,
+                        "Provider":  pname,
+                        "Score":     f"{s.total_score:.1f}/100",
+                        "Health":    f"{ev.health:.1f}" if ev else "—",
+                        "Latency":   f"{ev.latency_ms:.1f} ms" if ev else "—",
+                        "Loss":      f"{ev.packet_loss_percent:.2f}%" if ev else "—",
+                        "Risk":      f"{ev.failure_risk*100:.0f}%" if ev else "—",
+                        "SLA":       ev.sla_status.value if ev else "—",
+                        "Type":      exec_class,
+                        "Role":      role_badge,
                     })
-                st.dataframe(pd.DataFrame(comp_rows), width="stretch", hide_index=True)
+                st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
 
             # Simulation Scenarios
             if path_res.simulations:
@@ -1553,15 +1585,15 @@ with col_info:
                 sim_rows = []
                 for sim in path_res.simulations[:4]:
                     sim_rows.append({
-                        "Scenario": sim.scenario.value,
-                        "Provider": sim.provider_name,
-                        "Data Origin": f"[{sim.data_origin.value}] {sim.display_label}",
-                        "Exp Latency": f"{sim.expected_latency_ms:.1f} ms",
-                        "Exp Loss": f"{sim.expected_packet_loss_percent:.2f}%",
+                        "Scenario":        sim.scenario.value,
+                        "Provider":        sim.provider_name,
+                        "Data Origin":     f"[{sim.data_origin.value}] {sim.display_label}",
+                        "Exp Latency":     f"{sim.expected_latency_ms:.1f} ms",
+                        "Exp Loss":        f"{sim.expected_packet_loss_percent:.2f}%",
                         "Exp Utilization": f"{sim.expected_utilization_percent:.1f}%",
-                        "Exp Risk": f"{sim.expected_failure_risk*100:.0f}%",
+                        "Exp Risk":        f"{sim.expected_failure_risk*100:.0f}%",
                     })
-                st.dataframe(pd.DataFrame(sim_rows), width="stretch", hide_index=True)
+                st.dataframe(pd.DataFrame(sim_rows), use_container_width=True, hide_index=True)
 
             # Economic Status
             if path_res.economics:
@@ -1569,8 +1601,193 @@ with col_info:
                 st.markdown(f"**Network Economics Status**: `{econ.economic_status.value}` — *{econ.explanation}*")
 
             st.markdown('</div>', unsafe_allow_html=True)
+
+            # -------------------------------------------------------------------
+            # STAGE 7b: v1.5 Four-Provider Intelligence Details
+            # -------------------------------------------------------------------
+            st.write("")
+            with st.expander("🧠 v1.5 Four-Provider Intelligence Details (Digital Twin · GNN · Z3 Formal Verification)", expanded=False):
+
+                # -- Simulation Boundary Panel --
+                st.markdown('<div class="copilot-section-title">Provider Execution Boundary (Physical vs Simulated)</div>', unsafe_allow_html=True)
+                _bound_cols = st.columns(len(WAN_PROVIDER_REGISTRY))
+                for _bi, _prov in enumerate(WAN_PROVIDER_REGISTRY):
+                    with _bound_cols[_bi]:
+                        _pid  = _prov["provider_id"]
+                        _psim = _prov.get("is_simulated", False)
+                        _pmeta = _prov.get("metadata", {})
+                        if _psim:
+                            st.markdown(f"""
+                            <div style="background:rgba(220,38,38,0.12);border:1px solid rgba(248,113,113,0.5);border-radius:10px;padding:10px;text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:800;color:#f87171;">{_pid}</div>
+                                <div style="font-size:0.70rem;color:#94a3b8;margin-top:2px;">{_pmeta.get('provider_type','Simulated')}</div>
+                                <div style="font-size:0.72rem;font-weight:700;color:#fca5a5;margin-top:6px;">🚫 PHYSICAL EXECUTION BLOCKED</div>
+                                <div style="font-size:0.68rem;color:#94a3b8;">SIMULATION ONLY</div>
+                            </div>""", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"""
+                            <div style="background:rgba(5,150,105,0.12);border:1px solid rgba(52,211,153,0.5);border-radius:10px;padding:10px;text-align:center;">
+                                <div style="font-size:1.1rem;font-weight:800;color:#34d399;">{_pid}</div>
+                                <div style="font-size:0.70rem;color:#94a3b8;margin-top:2px;">{_pmeta.get('provider_type','Physical')}</div>
+                                <div style="font-size:0.72rem;font-weight:700;color:#34d399;margin-top:6px;">⚡ PHYSICAL</div>
+                                <div style="font-size:0.68rem;color:#94a3b8;">FRR Execution Allowed</div>
+                            </div>""", unsafe_allow_html=True)
+
+                st.write("")
+
+                # -- A) Digital Twin Result --
+                st.markdown('<div class="copilot-section-title">A) Digital Twin Simulation</div>', unsafe_allow_html=True)
+                _dt = getattr(path_res, "digital_twin_simulation", None)
+                if _dt and isinstance(_dt, dict) and _dt:
+                    _dt_cols = st.columns([2, 1, 1])
+                    with _dt_cols[0]:
+                        st.markdown(f"**Scenario**: `{_dt.get('scenario', '—')}`")
+                        st.markdown(f"**Target Entity**: `{_dt.get('target_entity', '—')}`")
+                        st.markdown(f"**Impact Severity**: `{_dt.get('impact_severity', '—')}`")
+                        st.markdown(f"**Summary**: {_dt.get('summary', '—')}")
+                    with _dt_cols[1]:
+                        _dt_br = _dt.get("blast_radius_pct", None)
+                        _dt_reach_raw = _dt.get("predicted_reachability", None)
+                        st.metric("Blast Radius", f"{_dt_br:.1f}%" if _dt_br is not None else "—")
+                        # predicted_reachability is a dict of {node: bool}
+                        if isinstance(_dt_reach_raw, dict) and _dt_reach_raw:
+                            _reachable = sum(1 for v in _dt_reach_raw.values() if v)
+                            _total_r   = len(_dt_reach_raw)
+                            st.metric("Reachability", f"{_reachable}/{_total_r} nodes")
+                        elif isinstance(_dt_reach_raw, (int, float)):
+                            st.metric("Predicted Reachability", f"{_dt_reach_raw*100:.0f}%")
+                        else:
+                            st.metric("Reachability", "—")
+                    with _dt_cols[2]:
+                        _dt_iso = _dt.get("isolated_nodes", [])
+                        _dt_rr  = _dt.get("rerouted_paths", {})
+                        _rr_count = len(_dt_rr) if isinstance(_dt_rr, (dict, list)) else 0
+                        st.markdown(f"**Isolated Nodes**: `{len(_dt_iso)}`")
+                        if _dt_iso:
+                            st.markdown("  · " + ", ".join([f"`{n}`" for n in _dt_iso[:4]]))
+                        st.markdown(f"**Rerouted Paths**: `{_rr_count}`")
+                        _dt_prov = _dt.get("provenance", "DIGITAL_TWIN_SIMULATED")
+                        st.markdown(f'<span class="provenance-badge prov-simulation">{_dt_prov}</span>', unsafe_allow_html=True)
+                else:
+                    st.info("Digital Twin simulation result not available (run path evaluation first).")
+
+                st.write("")
+
+                # -- B) GNN Blast Radius --
+                st.markdown('<div class="copilot-section-title">B) GNN Blast Radius Advisory</div>', unsafe_allow_html=True)
+                _gnn = getattr(path_res, "gnn_blast_radius", None)
+                if _gnn and isinstance(_gnn, dict) and _gnn:
+                    _gnn_cols = st.columns([2, 1, 1])
+                    with _gnn_cols[0]:
+                        st.markdown(f"**Entity**: `{_gnn.get('target_entity', _gnn.get('entity', '—'))}`")
+                        st.markdown(f"**Scenario**: `{_gnn.get('scenario', '—')}`")
+                        _gnn_prov = _gnn.get("provenance", "DETERMINISTIC_PROPAGATION_FALLBACK")
+                        # Always display the provenance explicitly
+                        st.markdown(f"**Provenance**: `{_gnn_prov}`")
+                        st.markdown('<span class="provenance-badge prov-inferred">DETERMINISTIC_PROPAGATION_FALLBACK</span>', unsafe_allow_html=True)
+                        _gnn_notes = _gnn.get("advisory_notes", [])
+                        if _gnn_notes:
+                            for _note in _gnn_notes[:2]:
+                                st.caption(f"ℹ️ {_note}")
+                    with _gnn_cols[1]:
+                        _gnn_br   = _gnn.get("predicted_blast_radius_pct", _gnn.get("blast_radius_pct", None))
+                        _gnn_conf = _gnn.get("confidence_score", _gnn.get("confidence", None))
+                        st.metric("Predicted Blast Radius", f"{_gnn_br:.1f}%" if _gnn_br is not None else "—")
+                        st.metric("Confidence", f"{_gnn_conf*100:.0f}%" if _gnn_conf is not None else "—")
+                    with _gnn_cols[2]:
+                        _gnn_nodes = _gnn.get("high_risk_nodes", _gnn.get("affected_nodes", None))
+                        _gnn_svc   = _gnn.get("impacted_service_count", None)
+                        _gnn_props = _gnn.get("propagation_probabilities", {})
+                        _node_count = len(_gnn_nodes) if isinstance(_gnn_nodes, list) else ("—" if _gnn_nodes is None else _gnn_nodes)
+                        st.markdown(f"**High-Risk Nodes**: `{_node_count}`")
+                        if isinstance(_gnn_nodes, list) and _gnn_nodes:
+                            st.markdown("  · " + ", ".join([f"`{n}`" for n in _gnn_nodes[:4]]))
+                        if _gnn_svc is not None:
+                            st.markdown(f"**Impacted Services**: `{_gnn_svc}`")
+                        if _gnn_props:
+                            _top_props = sorted(_gnn_props.items(), key=lambda x: x[1], reverse=True)[:3]
+                            st.markdown("**Top Propagation Risk**: " + ", ".join([f"`{n}` {v:.0%}" for n, v in _top_props]))
+                else:
+                    st.info("GNN blast radius result not available (run path evaluation first).")
+
+                st.write("")
+
+                # -- C) Z3 Formal Verification --
+                st.markdown('<div class="copilot-section-title">C) Z3 Formal Safety Verification</div>', unsafe_allow_html=True)
+                _z3 = getattr(path_res, "formal_verification", None)
+                if _z3 and isinstance(_z3, dict) and _z3:
+                    _z3_cols = st.columns([2, 1, 1])
+                    _z3_status   = _z3.get("status", "—")
+                    _z3_safe     = _z3.get("is_safe", None)
+                    _z3_solver   = _z3.get("solver_type", "—")
+                    _z3_time     = _z3.get("evaluation_time_ms", _z3.get("solve_time_ms", None))
+                    _z3_passed_l = _z3.get("passed_invariants", [])
+                    _z3_violated = _z3.get("violated_invariants", [])
+                    _z3_proof    = _z3.get("proof_summary", "")
+                    _z3_cex      = _z3.get("counterexample", None)
+                    _z3_checked  = len(_z3_passed_l) + len(_z3_violated)
+                    _z3_passed   = len(_z3_passed_l)
+                    # Color verdict
+                    if str(_z3_status).upper() == "SAT":
+                        _z3_color = "#34d399"
+                        _z3_icon  = "✅ SAT"
+                    elif str(_z3_status).upper() == "UNSAT":
+                        _z3_color = "#f87171"
+                        _z3_icon  = "🚫 UNSAT"
+                    else:
+                        _z3_color = "#fbbf24"
+                        _z3_icon  = f"⚠️ {_z3_status}"
+                    with _z3_cols[0]:
+                        st.markdown(f"**Verdict**: <span style='color:{_z3_color};font-size:1.2rem;font-weight:800;'>{_z3_icon}</span>", unsafe_allow_html=True)
+                        st.markdown(f"**Solver**: `{_z3_solver}`")
+                        if _z3_proof:
+                            st.markdown(f"**Proof Summary**: {_z3_proof}")
+                        if _z3_cex:
+                            st.error(f"⚠️ Counterexample: {_z3_cex}")
+                    with _z3_cols[1]:
+                        _safe_str = "✅ SAFE" if _z3_safe else ("🚫 UNSAFE" if _z3_safe is not None else "—")
+                        st.metric("Safety Verdict", _safe_str)
+                        st.metric("Solve Time", f"{_z3_time:.1f} ms" if _z3_time is not None else "—")
+                        st.metric("Invariants Total", str(_z3_checked))
+                    with _z3_cols[2]:
+                        st.metric("Invariants Passed", str(_z3_passed))
+                        st.metric("Invariants Violated", str(len(_z3_violated)))
+                        if _z3_checked and _z3_checked > 0:
+                            pass_rate = _z3_passed / _z3_checked * 100
+                            _prate_color = "#34d399" if pass_rate == 100 else "#fbbf24"
+                            st.markdown(f"<span style='color:{_prate_color};font-weight:700;'>Pass rate: {pass_rate:.0f}%</span>", unsafe_allow_html=True)
+                        if _z3_violated:
+                            st.markdown("**Violated**: " + ", ".join([f"`{v}`" for v in _z3_violated[:3]]))
+                else:
+                    st.info("Z3 formal verification result not available (run path evaluation first).")
+
+                # -- FRR Readiness Indicator --
+                st.write("")
+                st.markdown('<div class="copilot-section-title">D) FRR Control Plane Readiness</div>', unsafe_allow_html=True)
+                try:
+                    from agents.failover.frr_control_plane import FRRControlPlane
+                    _frr = FRRControlPlane()
+                    _frr_resp = _frr.check_readiness()
+                    _frr_ok   = _frr_resp.status.value == "READY"
+                    _frr_color = "#34d399" if _frr_ok else "#f87171"
+                    _frr_icon  = "🟢" if _frr_ok else "🔴"
+                    _frr_routes = _frr_resp.details.get("routes_count", "—")
+                    _frr_cols = st.columns([2, 1, 1])
+                    with _frr_cols[0]:
+                        st.markdown(f"**Status**: <span style='color:{_frr_color};font-weight:800;'>{_frr_icon} {_frr_resp.status.value}</span>", unsafe_allow_html=True)
+                        st.markdown(f"**Message**: {_frr_resp.message}")
+                    with _frr_cols[1]:
+                        st.metric("Driver",      _frr_resp.driver_type.value)
+                        st.metric("Route Count", str(_frr_routes))
+                    with _frr_cols[2]:
+                        st.metric("Target Container", _frr_resp.target)
+                        st.markdown('<span class="provenance-badge prov-observed">LIVE READ-ONLY PROBE</span>', unsafe_allow_html=True)
+                except Exception as _frr_e:
+                    st.info(f"FRR Control Plane: {_frr_e} (ContainerLab may not be running)")
+
     except Exception as e:
         st.warning(f"Path Decision Engine status: {e}")
+
 
     # -----------------------------------------------------------------------
     # STAGE 7.5: Unified Cross-Agent Evidence Lineage & Explainability Ledger
@@ -1804,7 +2021,11 @@ with col_info:
     try:
         from agents.adaptive_failover import AdaptiveFailoverService
         a_service = AdaptiveFailoverService()
-        a_res = a_service.process_adaptive_failover_cycle("ISP-A", "ISP-B")
+        # Derive physical providers only from WAN_PROVIDER_REGISTRY (exclude simulated)
+        _physical_prov_list = [p["provider_id"] for p in WAN_PROVIDER_REGISTRY if not p.get("is_simulated", False)]
+        _adaptive_source = _physical_prov_list[0] if len(_physical_prov_list) >= 1 else "ISP-A"
+        _adaptive_target = _physical_prov_list[1] if len(_physical_prov_list) >= 2 else "ISP-B"
+        a_res = a_service.process_adaptive_failover_cycle(_adaptive_source, _adaptive_target)
 
         st.markdown('<div class="copilot-card">', unsafe_allow_html=True)
         col_a1, col_a2 = st.columns([3, 2])
