@@ -90,6 +90,9 @@ class PathCandidate(BaseModel):
     is_independent: bool = Field(default=True, description="Whether path is physically/logically redundant")
     single_points_of_failure: List[str] = Field(default_factory=list, description="SPOF node/link IDs")
     bandwidth_mbps: float = Field(default=1000.0, description="Path nominal capacity in Mbps")
+    is_simulated: bool = Field(default=False, description="Whether provider is simulated or physically connected in lab")
+    next_hop: Optional[str] = Field(default=None, description="Next hop IP for WAN provider")
+    priority: int = Field(default=1, description="Configured provider priority")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Custom vendor metadata")
 
 
@@ -249,6 +252,9 @@ class PathDecisionResult(BaseModel):
     reasoning_summary: Optional[Dict[str, Any]] = Field(default=None)
     trust_decision: Optional[Dict[str, Any]] = Field(default=None)
     premortem_summary: Optional[Dict[str, Any]] = Field(default=None)
+    digital_twin_simulation: Optional[Dict[str, Any]] = Field(default=None, description="Digital Twin What-If simulation metadata")
+    gnn_blast_radius: Optional[Dict[str, Any]] = Field(default=None, description="GNN advisory blast-radius evaluation")
+    formal_verification: Optional[Dict[str, Any]] = Field(default=None, description="Z3 formal safety verification result")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property

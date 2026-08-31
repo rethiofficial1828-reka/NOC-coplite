@@ -90,7 +90,13 @@ class DryRunExecutionAdapter(IExecutionAdapter):
         """
         Create inverse ExecutionStep for dry-run rollback.
         """
-        inverse_action = "FAILBACK_PROVIDER" if step.action_type == "FAILOVER_PROVIDER" else "ENABLE_BACKUP_PATH"
+        if step.action_type == "FAILOVER_PROVIDER":
+            inverse_action = "FAILBACK_PROVIDER"
+        elif step.action_type in ("TRANSITION_PROVIDER", "FAILBACK_PROVIDER"):
+            inverse_action = "TRANSITION_PROVIDER"
+        else:
+            inverse_action = "ENABLE_BACKUP_PATH"
+
         inverse_params = dict(step.parameters)
         if "target_provider" in step.parameters and "source_provider" in step.parameters:
             inverse_params["target_provider"] = step.parameters["source_provider"]

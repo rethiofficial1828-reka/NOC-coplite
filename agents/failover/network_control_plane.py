@@ -75,6 +75,19 @@ class FailbackProviderRequest(BaseModel):
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Validated metadata")
 
 
+class TransitionProviderRequest(BaseModel):
+    """Typed request payload for generic N-provider transition (source_provider -> target_provider)."""
+
+    request_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    target_device: str = Field(..., description="Target router or gateway device ID/name")
+    wan_interface: str = Field(..., description="Target WAN interface name")
+    source_provider: str = Field(..., description="Source provider being transitioned from")
+    target_provider: str = Field(..., description="Target provider to transition to")
+    next_hop: Optional[str] = Field(default=None, description="Optional target next-hop IP")
+    is_simulated: bool = Field(default=False, description="Whether target provider is simulated")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Validated metadata")
+
+
 class SwitchInterfaceRequest(BaseModel):
     """Typed request payload for direct interface switching."""
 
@@ -161,6 +174,34 @@ class INetworkControlPlane(ABC):
         """Execute typed provider failback."""
         pass
 
+    def transition_provider(self, request: TransitionProviderRequest) -> ControlPlaneResponse:
+        """
+        Execute generic typed provider transition (source_provider -> target_provider).
+        Default implementation delegates to failback_provider or failover_provider.
+        """
+        if request.target_provider in ("ISP-A", "Primary"):
+            return self.failback_provider(
+                FailbackProviderRequest(
+                    target_device=request.target_device,
+                    wan_interface=request.wan_interface,
+                    source_provider=request.source_provider,
+                    target_provider=request.target_provider,
+                    next_hop=request.next_hop,
+                    metadata=request.metadata,
+                )
+            )
+        else:
+            return self.failover_provider(
+                FailoverProviderRequest(
+                    target_device=request.target_device,
+                    wan_interface=request.wan_interface,
+                    source_provider=request.source_provider,
+                    target_provider=request.target_provider,
+                    next_hop=request.next_hop,
+                    metadata=request.metadata,
+                )
+            )
+
     @abstractmethod
     def switch_interface(self, request: SwitchInterfaceRequest) -> ControlPlaneResponse:
         """Execute typed interface switch."""
@@ -236,6 +277,18 @@ class NotConfiguredControlPlane(INetworkControlPlane):
             target=request.target_device,
             message="Cannot execute failback_provider: No network control plane driver is configured.",
             details={"target_provider": request.target_provider},
+        )
+
+    def transition_provider(self, request: TransitionProviderRequest) -> ControlPlaneResponse:
+        logger.warning("transition_provider invoked on NotConfiguredControlPlane — rejecting execution.")
+        return ControlPlaneResponse(
+            success=False,
+            status=ControlPlaneStatus.NOT_CONFIGURED,
+            driver_type=self.driver_type,
+            action_type="TRANSITION_PROVIDER",
+            target=request.target_device,
+            message="Cannot execute transition_provider: No network control plane driver is configured.",
+            details={"source_provider": request.source_provider, "target_provider": request.target_provider},
         )
 
     def switch_interface(self, request: SwitchInterfaceRequest) -> ControlPlaneResponse:
@@ -387,6 +440,17 @@ class TypedControlPlaneDelegate(INetworkProviderDelegate):
                 metadata=parameters,
             )
             resp = self._control_plane.switch_interface(req_sw)
+        elif action_type == "TRANSITION_PROVIDER":
+            req_tr = TransitionProviderRequest(
+                target_device=target,
+                wan_interface=parameters.get("interface", target),
+                source_provider=parameters.get("source_provider", "ISP-A"),
+                target_provider=parameters.get("target_provider", "ISP-B"),
+                next_hop=parameters.get("next_hop"),
+                is_simulated=parameters.get("is_simulated", False),
+                metadata=parameters,
+            )
+            resp = self._control_plane.transition_provider(req_tr)
         elif action_type == "ENABLE_BACKUP_PATH":
             req_en = PathStateRequest(
                 target_device=target,
@@ -423,13 +487,13 @@ class TypedControlPlaneDelegate(INetworkProviderDelegate):
         """
         if action_type == "FAILBACK_PROVIDER":
             return self.execute_typed_action(action_type, target, parameters)
-        elif action_type == "FAILOVER_PROVIDER":
+        elif action_type in ("FAILOVER_PROVIDER", "TRANSITION_PROVIDER"):
             inverse_params = dict(parameters)
             src = parameters.get("source_provider", "ISP-A")
             tgt = parameters.get("target_provider", "ISP-B")
             inverse_params["source_provider"] = tgt
             inverse_params["target_provider"] = src
-            return self.execute_typed_action("FAILBACK_PROVIDER", target, inverse_params)
+            return self.execute_typed_action("TRANSITION_PROVIDER", target, inverse_params)
         elif action_type == "ENABLE_BACKUP_PATH":
             return self.execute_typed_action("DISABLE_DEGRADED_PATH", target, parameters)
         elif action_type == "DISABLE_DEGRADED_PATH":

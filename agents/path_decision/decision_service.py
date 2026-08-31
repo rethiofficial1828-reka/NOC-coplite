@@ -47,6 +47,10 @@ from agents.path_decision.recommendation_engine import FailoverRecommendationEng
 from agents.premortem.premortem_service import PreMortemService
 from agents.reasoning.reasoning_service import ReasoningService
 from agents.trust.trust_service import TrustService
+from agents.twin.twin_service import DigitalTwinService
+from agents.gnn.gnn_service import GNNService
+from agents.z3_verifier.z3_models import Z3VerificationRequest
+from agents.z3_verifier.z3_verifier import Z3FormalVerifier
 
 logger = get_agent_logger("PathDecisionService")
 
@@ -68,6 +72,9 @@ class PathDecisionService:
         reasoning_service: Optional[ReasoningService] = None,
         trust_service: Optional[TrustService] = None,
         premortem_service: Optional[PreMortemService] = None,
+        twin_service: Optional[DigitalTwinService] = None,
+        gnn_service: Optional[GNNService] = None,
+        z3_verifier: Optional[Z3FormalVerifier] = None,
         event_bus: Optional[EventBus] = None,
     ) -> None:
         self._discovery_engine = discovery_engine or PathDiscoveryEngine()
@@ -81,6 +88,9 @@ class PathDecisionService:
         self._reasoning_service = reasoning_service or ReasoningService()
         self._trust_service = trust_service or TrustService()
         self._premortem_service = premortem_service or PreMortemService()
+        self._twin_service = twin_service or DigitalTwinService(event_bus=event_bus)
+        self._gnn_service = gnn_service or GNNService(event_bus=event_bus)
+        self._z3_verifier = z3_verifier or Z3FormalVerifier()
         self._event_bus = event_bus
 
         self._lock = threading.RLock()
@@ -297,6 +307,36 @@ class PathDecisionService:
 
             self._publish_event("path.recommendation.generated", {"request_id": req_id, "recommendation": recommendation.model_dump(mode="json")})
 
+            # Step 10: Digital Twin What-If Simulation
+            target_prov = recommendation.recommended_provider or primary_path.provider_name
+            twin_sim = self._twin_service.simulate_failover(
+                source_provider=primary_path.provider_name,
+                target_provider=target_prov,
+                target_device=primary_path.source_device,
+            )
+            twin_summary = twin_sim.model_dump(mode="json")
+
+            # Step 11: GNN Failure Propagation & Blast Radius Advisory
+            gnn_res = self._gnn_service.evaluate_blast_radius(target_entity=target_prov, scenario="FAILOVER", initial_perturbation=0.30)
+            gnn_summary = gnn_res.model_dump(mode="json")
+
+            # Step 12: Formal Invariant Verification Gate (Z3)
+            from config.settings import WAN_PROVIDER_REGISTRY
+            p_def = next((p for p in WAN_PROVIDER_REGISTRY if p["provider_id"] == target_prov), None)
+            z3_req = Z3VerificationRequest(
+                plan_id=req_id,
+                source_provider=primary_path.provider_name,
+                target_provider=target_prov,
+                target_device=primary_path.source_device,
+                wan_interface=primary_path.wan_interface,
+                next_hop=p_def.get("next_hop") if p_def else None,
+                is_simulated=p_def.get("is_simulated", False) if p_def else False,
+                execution_mode="DRY_RUN",
+                predicted_blast_radius_pct=gnn_res.predicted_blast_radius_pct,
+            )
+            z3_verdict = self._z3_verifier.verify_plan(z3_req)
+            z3_summary = z3_verdict.model_dump(mode="json")
+
             result = PathDecisionResult(
                 decision_id=str(uuid.uuid4()),
                 request_id=req_id,
@@ -310,6 +350,9 @@ class PathDecisionService:
                 reasoning_summary=reasoning_summary,
                 trust_decision=trust_summary,
                 premortem_summary=premortem_summary,
+                digital_twin_simulation=twin_summary,
+                gnn_blast_radius=gnn_summary,
+                formal_verification=z3_summary,
                 created_at=datetime.now(timezone.utc),
             )
 
@@ -385,6 +428,24 @@ class PathDecisionService:
                     "drops": 0.0,
                     "routing_flaps": 0,
                 }
+            elif "cellular" in interface_key.lower() or "cell" in interface_key.lower() or "isp-c" in interface_key.lower():
+                metrics = {
+                    "latency": 32.0,
+                    "packet_loss": 0.3,
+                    "jitter": 3.5,
+                    "utilization": 25.0,
+                    "drops": 0.0,
+                    "routing_flaps": 0,
+                }
+            elif "satellite" in interface_key.lower() or "sat" in interface_key.lower() or "isp-d" in interface_key.lower():
+                metrics = {
+                    "latency": 65.0,
+                    "packet_loss": 0.6,
+                    "jitter": 7.0,
+                    "utilization": 15.0,
+                    "drops": 0.0,
+                    "routing_flaps": 0,
+                }
             elif "branch3-uplink" in interface_key.lower() or "branch3" in interface_key.lower() or "uplink" in interface_key.lower():
                 metrics = {
                     "latency": 195.0,
@@ -415,7 +476,12 @@ class PathDecisionService:
         if override_risk is not None:
             return override_risk
 
-        if "backup" in interface_key.lower() or "secondary" in interface_key.lower():
+        if (
+            "backup" in interface_key.lower()
+            or "secondary" in interface_key.lower()
+            or "cellular" in interface_key.lower()
+            or "satellite" in interface_key.lower()
+        ):
             return 0.05
 
         if "branch3-uplink" in interface_key.lower() or "uplink" in interface_key.lower():

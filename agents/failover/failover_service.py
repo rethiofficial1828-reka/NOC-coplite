@@ -45,6 +45,8 @@ from agents.failover.pre_execution_validator import PreExecutionValidator
 from agents.failover.rollback_engine import RollbackEngine
 from agents.orchestrator_ai.investigation_context import InvestigationContext
 from agents.path_decision.path_models import PathDecisionResult
+from agents.z3_verifier.z3_models import Z3VerificationRequest, Z3VerificationStatus
+from agents.z3_verifier.z3_verifier import Z3FormalVerifier
 
 logger = get_agent_logger("FailoverService")
 
@@ -63,6 +65,7 @@ class FailoverService:
         dry_run_adapter: Optional[DryRunExecutionAdapter] = None,
         authorized_adapter: Optional[AuthorizedNetworkAdapter] = None,
         path_decision_service: Optional[Any] = None,
+        z3_verifier: Optional[Z3FormalVerifier] = None,
         event_bus: Optional[EventBus] = None,
     ) -> None:
         self._approval_manager = approval_manager or ApprovalManager()
@@ -71,6 +74,7 @@ class FailoverService:
         self._rollback_engine = rollback_engine or RollbackEngine()
         self._dry_run_adapter = dry_run_adapter or DryRunExecutionAdapter()
         self._authorized_adapter = authorized_adapter or AuthorizedNetworkAdapter()
+        self._z3_verifier = z3_verifier or Z3FormalVerifier()
         if path_decision_service is None:
             from agents.path_decision.decision_service import PathDecisionService
             self._path_decision_service = PathDecisionService()
@@ -247,6 +251,47 @@ class FailoverService:
                 self._publish_event("failover.failed", {"request_id": req_id, "status": "PRECHECK_FAILED"})
                 return rec_res
 
+            # 4b. Formal Z3 Safety Verification Gate
+            from config.settings import WAN_PROVIDER_REGISTRY
+            source_prov = plan.source_path
+            target_prov = plan.destination_path
+            target_dev = plan.target_devices[0] if plan.target_devices else "branch3-uplink"
+            wan_if = plan.steps[0].parameters.get("interface", "Branch3-Uplink") if plan.steps else "Branch3-Uplink"
+            p_def = next((p for p in WAN_PROVIDER_REGISTRY if p["provider_id"] == target_prov), None)
+            is_sim = (p_def.get("is_simulated", False) if p_def else False) or (target_prov in ("ISP-C", "ISP-D"))
+
+            z3_req = Z3VerificationRequest(
+                plan_id=plan.plan_id,
+                source_provider=source_prov,
+                target_provider=target_prov,
+                target_device=target_dev,
+                wan_interface=wan_if,
+                next_hop=p_def.get("next_hop") if p_def else None,
+                is_simulated=is_sim,
+                execution_mode=execution_mode.value,
+                predicted_blast_radius_pct=float(decision_res.gnn_blast_radius.get("predicted_blast_radius_pct", 10.0)) if decision_res.gnn_blast_radius else 10.0,
+            )
+            z3_verdict = self._z3_verifier.verify_plan(z3_req)
+            self._publish_event("failover.z3_verification.completed", {"request_id": req_id, "status": z3_verdict.status.value, "is_safe": z3_verdict.is_safe})
+
+            if not z3_verdict.is_safe:
+                logger.error(f"Z3 Formal Verification UNSAT: {z3_verdict.proof_summary} - halting execution.")
+                rec_res = FailoverResult(
+                    failover_id=str(uuid.uuid4()),
+                    request_id=req_id,
+                    decision_id=decision_res.decision_id,
+                    approval=approval,
+                    prechecks=precheck_list,
+                    execution_plan=plan,
+                    z3_verification=z3_verdict.model_dump(mode="json"),
+                    digital_twin_simulation=decision_res.digital_twin_simulation,
+                    gnn_blast_radius=decision_res.gnn_blast_radius,
+                    final_status=ExecutionStatus.BLOCKED,
+                    audit_reference=self._write_audit_log(req_id, "Z3_VERIFICATION_FAILED"),
+                )
+                self._publish_event("failover.failed", {"request_id": req_id, "status": "Z3_VERIFICATION_FAILED"})
+                return rec_res
+
             # 5. Resolve Adapter
             adapter = self._adapters.get(adapter_name, self._dry_run_adapter)
 
@@ -347,6 +392,9 @@ class FailoverService:
                 execution_result=exec_res,
                 verification_result=verif_res,
                 rollback_result=rollback_res,
+                z3_verification=z3_verdict.model_dump(mode="json") if 'z3_verdict' in locals() else None,
+                digital_twin_simulation=decision_res.digital_twin_simulation,
+                gnn_blast_radius=decision_res.gnn_blast_radius,
                 final_status=final_status,
                 audit_reference=audit_ref,
                 created_at=datetime.now(timezone.utc),

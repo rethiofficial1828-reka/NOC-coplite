@@ -89,6 +89,7 @@ class IExecutionAdapter(ABC):
     SUPPORTED_ACTIONS = [
         "FAILOVER_PROVIDER",
         "FAILBACK_PROVIDER",
+        "TRANSITION_PROVIDER",
         "ENABLE_BACKUP_PATH",
         "DISABLE_DEGRADED_PATH",
         "SWITCH_INTERFACE",

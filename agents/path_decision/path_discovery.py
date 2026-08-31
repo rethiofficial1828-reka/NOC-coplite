@@ -134,39 +134,109 @@ class PathDiscoveryEngine:
 
         # Standard multi-provider topologies mapping real devices
         if "branch3" in dev_name.lower():
-            # Branch3 WAN Uplink mapping: ISP-A (Primary WAN) & ISP-B (Backup SD-WAN)
-            candidates.append(
-                PathCandidate(
-                    provider_name="ISP-A",
-                    wan_interface="Branch3-Uplink",
-                    source_device=dev_name,
-                    destination=destination,
-                    is_primary=True,
-                    hops=[dev_name, "Edge-Rtr-01", "ISP-A-POP", destination],
-                    interfaces=["ge-0/0/0", "eth1", "uplink1"],
-                    dependencies=["ISP-A-Gateway", "Core-Router-01"],
-                    is_independent=True,
-                    single_points_of_failure=["Edge-Rtr-01"],
-                    bandwidth_mbps=1000.0,
-                    metadata={"provider_type": "Primary Fiber", "sla_latency_max_ms": 50.0},
+            # Configuration-driven N-provider discovery from WAN_PROVIDER_REGISTRY
+            try:
+                from config.settings import WAN_PROVIDER_REGISTRY
+                wan_regs = [p for p in WAN_PROVIDER_REGISTRY if p.get("source_device") in ("branch3-uplink", dev_name.lower()) or "branch3" in p.get("wan_interface", "").lower()]
+            except Exception:
+                wan_regs = []
+
+            if wan_regs:
+                for reg in wan_regs:
+                    p_name = reg.get("provider_name", "UNKNOWN")
+                    wan_if = reg.get("wan_interface", "eth0")
+                    is_prim = reg.get("is_primary", False)
+                    is_sim = reg.get("is_simulated", False)
+                    nh = reg.get("next_hop", "")
+                    prio = reg.get("priority", 1)
+                    bw = reg.get("bandwidth_mbps", 1000.0)
+                    meta = reg.get("metadata", {})
+
+                    if p_name == "ISP-A":
+                        hops = [dev_name, "Edge-Rtr-01", "ISP-A-POP", destination]
+                        ifaces = ["ge-0/0/0", "eth1", "uplink1"]
+                        deps = ["ISP-A-Gateway", "Core-Router-01"]
+                        spofs = ["Edge-Rtr-01"]
+                    elif p_name == "ISP-B":
+                        hops = [dev_name, "Edge-Rtr-02", "ISP-B-POP", destination]
+                        ifaces = ["ge-0/0/1", "eth2", "uplink2"]
+                        deps = ["ISP-B-Gateway"]
+                        spofs = []
+                    elif p_name == "ISP-C":
+                        hops = [dev_name, "Cellular-Tower-01", "ISP-C-5G-Core", destination]
+                        ifaces = ["cell0", "eth3", "wwan0"]
+                        deps = ["ISP-C-Gateway"]
+                        spofs = []
+                    elif p_name == "ISP-D":
+                        hops = [dev_name, "Sat-Terminal-01", "LEO-Constellation", destination]
+                        ifaces = ["sat0", "eth4"]
+                        deps = ["ISP-D-Ground-Station"]
+                        spofs = []
+                    else:
+                        hops = [dev_name, f"{p_name}-GW", destination]
+                        ifaces = [wan_if]
+                        deps = [f"{p_name}-Gateway"]
+                        spofs = []
+
+                    candidates.append(
+                        PathCandidate(
+                            provider_name=p_name,
+                            wan_interface=wan_if,
+                            source_device=dev_name,
+                            destination=destination,
+                            is_primary=is_prim,
+                            hops=hops,
+                            interfaces=ifaces,
+                            dependencies=deps,
+                            is_independent=True,
+                            single_points_of_failure=spofs,
+                            bandwidth_mbps=bw,
+                            is_simulated=is_sim,
+                            next_hop=nh,
+                            priority=prio,
+                            metadata=meta,
+                        )
+                    )
+            else:
+                # Fallback if registry unavailable
+                candidates.append(
+                    PathCandidate(
+                        provider_name="ISP-A",
+                        wan_interface="Branch3-Uplink",
+                        source_device=dev_name,
+                        destination=destination,
+                        is_primary=True,
+                        hops=[dev_name, "Edge-Rtr-01", "ISP-A-POP", destination],
+                        interfaces=["ge-0/0/0", "eth1", "uplink1"],
+                        dependencies=["ISP-A-Gateway", "Core-Router-01"],
+                        is_independent=True,
+                        single_points_of_failure=["Edge-Rtr-01"],
+                        bandwidth_mbps=1000.0,
+                        is_simulated=False,
+                        next_hop="10.10.1.1",
+                        priority=1,
+                        metadata={"provider_type": "Primary Fiber", "sla_latency_max_ms": 50.0},
+                    )
                 )
-            )
-            candidates.append(
-                PathCandidate(
-                    provider_name="ISP-B",
-                    wan_interface="Branch3-Backup",
-                    source_device=dev_name,
-                    destination=destination,
-                    is_primary=False,
-                    hops=[dev_name, "Edge-Rtr-02", "ISP-B-POP", destination],
-                    interfaces=["ge-0/0/1", "eth2", "uplink2"],
-                    dependencies=["ISP-B-Gateway"],
-                    is_independent=True,
-                    single_points_of_failure=[],
-                    bandwidth_mbps=500.0,
-                    metadata={"provider_type": "Secondary Broadband", "sla_latency_max_ms": 60.0},
+                candidates.append(
+                    PathCandidate(
+                        provider_name="ISP-B",
+                        wan_interface="Branch3-Backup",
+                        source_device=dev_name,
+                        destination=destination,
+                        is_primary=False,
+                        hops=[dev_name, "Edge-Rtr-02", "ISP-B-POP", destination],
+                        interfaces=["ge-0/0/1", "eth2", "uplink2"],
+                        dependencies=["ISP-B-Gateway"],
+                        is_independent=True,
+                        single_points_of_failure=[],
+                        bandwidth_mbps=500.0,
+                        is_simulated=False,
+                        next_hop="10.10.2.1",
+                        priority=2,
+                        metadata={"provider_type": "Secondary Broadband", "sla_latency_max_ms": 60.0},
+                    )
                 )
-            )
         elif "router" in dev_name.lower() or "rtr" in dev_name.lower():
             candidates.append(
                 PathCandidate(

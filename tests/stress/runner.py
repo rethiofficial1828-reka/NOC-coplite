@@ -8,7 +8,10 @@ import gc
 import json
 import os
 import random
-import resource
+try:
+    import resource
+except ImportError:
+    resource = None
 import time
 import traceback
 from typing import Any, Dict, List, Optional, Tuple
@@ -99,7 +102,9 @@ class StressRunner:
     @staticmethod
     def get_peak_rss_mb() -> float:
         """Return the peak resident set size (RSS) in megabytes for the current process."""
-        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+        if resource is not None and hasattr(resource, "getrusage"):
+            return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+        return 0.0
 
     def _periodic_state_cleanup(self) -> None:
         """Prune in-memory state accumulated in stateful subsystem singletons."""

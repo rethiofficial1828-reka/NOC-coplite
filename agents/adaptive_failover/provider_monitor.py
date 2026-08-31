@@ -167,12 +167,21 @@ class ProviderMonitor:
 
     def _fetch_from_db_or_default(self, provider_name: str, wan_interface: str) -> ProviderHealthSnapshot:
         """Internal helper to construct initial snapshot."""
+        if provider_name in ("ISP-B", "Secondary"):
+            hs, lat, loss, risk, orig = 94.0, 22.0, 0.1, 0.08, DataOrigin.OBSERVED
+        elif provider_name in ("ISP-C", "Cellular"):
+            hs, lat, loss, risk, orig = 91.0, 32.0, 0.3, 0.05, DataOrigin.SIMULATED
+        elif provider_name in ("ISP-D", "Satellite"):
+            hs, lat, loss, risk, orig = 84.0, 65.0, 0.6, 0.05, DataOrigin.SIMULATED
+        else:
+            hs, lat, loss, risk, orig = 31.5, 195.0, 8.5, 0.91, DataOrigin.OBSERVED
+
         return ProviderHealthSnapshot(
             provider_name=provider_name,
             wan_interface=wan_interface,
-            health_score=94.0 if provider_name in ("ISP-B", "Secondary") else 31.5,
-            latency_ms=22.0 if provider_name in ("ISP-B", "Secondary") else 195.0,
-            packet_loss_percent=0.1 if provider_name in ("ISP-B", "Secondary") else 8.5,
-            failure_risk=0.08 if provider_name in ("ISP-B", "Secondary") else 0.91,
-            data_origin=DataOrigin.OBSERVED,
+            health_score=hs,
+            latency_ms=lat,
+            packet_loss_percent=loss,
+            failure_risk=risk,
+            data_origin=orig,
         )

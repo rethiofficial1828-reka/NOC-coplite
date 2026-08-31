@@ -3,7 +3,7 @@ import os
 # Project root directory (parent directory of config package)
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-VERSION = "1.4.0-rc1"
+VERSION = "1.5.0-dev"
 __version__ = VERSION
 
 # Key directories
@@ -67,7 +67,79 @@ DEVICE_REGISTRY = [
 DEVICE_NAMES = [d["name"] for d in DEVICE_REGISTRY]
 
 # ---------------------------------------------------------------------------
-# Site Registry (v1.3) — Hierarchical physical and logical site grouping.
+# WAN Provider Registry (v1.5 Multi-WAN N-Provider Model)
+# Configuration-driven provider definitions supporting both physical lab
+# endpoints (ISP-A, ISP-B) and simulated candidates (ISP-C, ISP-D).
+# ---------------------------------------------------------------------------
+WAN_PROVIDER_REGISTRY = [
+    {
+        "provider_id": "ISP-A",
+        "provider_name": "ISP-A",
+        "wan_interface": "Branch3-Uplink",
+        "source_device": "branch3-uplink",
+        "next_hop": "10.10.1.1",
+        "priority": 1,
+        "bandwidth_mbps": 1000.0,
+        "is_primary": True,
+        "is_simulated": False,
+        "metadata": {
+            "provider_type": "Primary Fiber",
+            "sla_latency_max_ms": 50.0,
+            "sla_loss_max_percent": 1.0,
+        },
+    },
+    {
+        "provider_id": "ISP-B",
+        "provider_name": "ISP-B",
+        "wan_interface": "Branch3-Backup",
+        "source_device": "branch3-uplink",
+        "next_hop": "10.10.2.1",
+        "priority": 2,
+        "bandwidth_mbps": 500.0,
+        "is_primary": False,
+        "is_simulated": False,
+        "metadata": {
+            "provider_type": "Secondary Broadband",
+            "sla_latency_max_ms": 60.0,
+            "sla_loss_max_percent": 2.0,
+        },
+    },
+    {
+        "provider_id": "ISP-C",
+        "provider_name": "ISP-C",
+        "wan_interface": "Branch3-Cellular",
+        "source_device": "branch3-uplink",
+        "next_hop": "10.10.3.1",
+        "priority": 3,
+        "bandwidth_mbps": 250.0,
+        "is_primary": False,
+        "is_simulated": True,
+        "metadata": {
+            "provider_type": "5G LTE Backup",
+            "sla_latency_max_ms": 70.0,
+            "sla_loss_max_percent": 3.0,
+        },
+    },
+    {
+        "provider_id": "ISP-D",
+        "provider_name": "ISP-D",
+        "wan_interface": "Branch3-Satellite",
+        "source_device": "branch3-uplink",
+        "next_hop": "10.10.4.1",
+        "priority": 4,
+        "bandwidth_mbps": 100.0,
+        "is_primary": False,
+        "is_simulated": True,
+        "metadata": {
+            "provider_type": "LEO Satellite Backup",
+            "sla_latency_max_ms": 90.0,
+            "sla_loss_max_percent": 4.0,
+        },
+    },
+]
+
+# ---------------------------------------------------------------------------
+# Site Registry (v1.3 / v1.5) — Hierarchical physical and logical site grouping.
 # Maps constituent device IDs and interfaces into manageable operational sites.
 # ---------------------------------------------------------------------------
 SITE_REGISTRY = [
@@ -96,7 +168,7 @@ SITE_REGISTRY = [
         "location": "Branch Office",
         "device_ids": ["branch3-uplink"],
         "primary_providers": ["ISP-A"],
-        "backup_providers": ["ISP-B"],
+        "backup_providers": ["ISP-B", "ISP-C", "ISP-D"],
     },
     {
         "site_id": "site-branch1",
@@ -116,6 +188,6 @@ LAB_CONTROL_PLANE = os.getenv("NOC_LAB_CONTROL_PLANE", "none")
 SUPPORTED_CONTROL_PLANES = ["none", "gnmi", "netconf", "frr_zapi"]
 
 # ---------------------------------------------------------------------------
-# Production Authorization & Safety Invariants (v1.4)
+# Production Authorization & Safety Invariants (v1.4 / v1.5)
 # ---------------------------------------------------------------------------
 PRODUCTION_AUTHORIZED = False

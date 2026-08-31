@@ -28,6 +28,7 @@ from agents.failover.network_control_plane import (
     PathStateRequest,
     RouteVerificationRequest,
     SwitchInterfaceRequest,
+    TransitionProviderRequest,
 )
 
 logger = get_agent_logger("FRRControlPlane")
@@ -275,6 +276,79 @@ class FRRControlPlane(INetworkControlPlane):
             message=f"Failover to ISP-B applied. Readback: {verify_res.message}",
             details=verify_res.details,
         )
+
+    def transition_provider(self, request: TransitionProviderRequest) -> ControlPlaneResponse:
+        """
+        Execute generic typed provider transition (source_provider -> target_provider).
+        Strictly verifies physical vs simulated boundaries: rejects physical mutations on simulated providers.
+        """
+        src = request.source_provider
+        tgt = request.target_provider
+
+        # Explicit physical vs simulated boundary check
+        if request.is_simulated or tgt in ("ISP-C", "ISP-D") or src in ("ISP-C", "ISP-D"):
+            logger.warning(
+                f"FRRControlPlane rejected physical execution: target provider '{tgt}' or source '{src}' is SIMULATED."
+            )
+            return ControlPlaneResponse(
+                success=False,
+                status=ControlPlaneStatus.UNAVAILABLE,
+                driver_type=self.driver_type,
+                action_type="TRANSITION_PROVIDER",
+                target=request.target_device,
+                message=f"Physical execution rejected: provider '{tgt}' is SIMULATED (decision-engine candidate only; not physically connected in lab).",
+                details={
+                    "source_provider": src,
+                    "target_provider": tgt,
+                    "is_simulated": True,
+                    "physical_execution_blocked": True,
+                    "allowed_physical_providers": ["ISP-A", "ISP-B"],
+                },
+            )
+
+        if src == tgt:
+            return ControlPlaneResponse(
+                success=True,
+                status=ControlPlaneStatus.READY,
+                driver_type=self.driver_type,
+                action_type="TRANSITION_PROVIDER",
+                target=request.target_device,
+                message=f"Source and target provider are identical ('{tgt}'). No routing change required.",
+                details={"active_provider": tgt},
+            )
+
+        if tgt == "ISP-B" and src == "ISP-A":
+            return self.failover_provider(
+                FailoverProviderRequest(
+                    target_device=request.target_device,
+                    wan_interface=request.wan_interface,
+                    source_provider=src,
+                    target_provider=tgt,
+                    next_hop=request.next_hop or "10.10.2.1",
+                    metadata=request.metadata,
+                )
+            )
+        elif tgt == "ISP-A" and src == "ISP-B":
+            return self.failback_provider(
+                FailbackProviderRequest(
+                    target_device=request.target_device,
+                    wan_interface=request.wan_interface,
+                    source_provider=src,
+                    target_provider=tgt,
+                    next_hop=request.next_hop or "10.10.1.1",
+                    metadata=request.metadata,
+                )
+            )
+        else:
+            return ControlPlaneResponse(
+                success=False,
+                status=ControlPlaneStatus.ERROR,
+                driver_type=self.driver_type,
+                action_type="TRANSITION_PROVIDER",
+                target=request.target_device,
+                message=f"Unsupported physical provider transition from '{src}' to '{tgt}' on physical lab.",
+                details={"source_provider": src, "target_provider": tgt},
+            )
 
     def failback_provider(self, request: FailbackProviderRequest) -> ControlPlaneResponse:
         """Execute typed failback from ISP-B to ISP-A on branch3-uplink by reprioritizing ISP-A."""
