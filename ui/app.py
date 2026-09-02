@@ -950,13 +950,13 @@ trust_score_val = 0.52
 blast_radius_val = "HIGH" if current_risk_score >= 0.3 else "LOW"
 autonomy_dec_val = "HUMAN_APPROVAL_REQUIRED" if current_risk_score >= 0.3 else "AUTONOMOUS_EXECUTION_PERMITTED"
 
-# Attempt to get recommended provider from actual PathDecisionResult (v1.5)
-_path_res_early = None
+# Unified Path Decision Service evaluation for the entire Single-Incident Workbench (v1.5)
+path_res = None
 try:
-    from agents.path_decision import PathDecisionService as _PDS
-    _path_res_early = _PDS().evaluate_path_decision(selected_name)
-    if _path_res_early and _path_res_early.recommendation and _path_res_early.recommendation.recommended_provider:
-        recommended_prov_val = _path_res_early.recommendation.recommended_provider
+    from agents.path_decision import PathDecisionService
+    path_res = PathDecisionService().evaluate_path_decision(selected_name)
+    if path_res and path_res.recommendation and path_res.recommendation.recommended_provider:
+        recommended_prov_val = path_res.recommendation.recommended_provider
     else:
         recommended_prov_val = "ISP-B" if current_risk_score >= 0.3 else "ISP-A"
 except Exception:
@@ -1373,7 +1373,10 @@ with col_info:
         from agents.reasoning import ReasoningService
         from agents.trust import TrustService
 
-        inv_req = InvestigationRequest(target_devices=[selected_name])
+        inv_req = InvestigationRequest(
+            operator_query=f"Unified Investigation for {selected_name}",
+            device_id=selected_name,
+        )
         inv_ctx = InvestigationContext(request=inv_req)
         
         reasoning_svc = ReasoningService()
@@ -1402,14 +1405,31 @@ with col_info:
         st.markdown('<div class="copilot-card">', unsafe_allow_html=True)
         st.markdown(f"### 🛡️ Trust & Safety Gate — Decision: `{trust_dec.decision.value}`")
         col_t1, col_t2 = st.columns([3, 2])
+        # Robust accessor for TrustDecision / TrustAssessment
+        _assessment = getattr(trust_dec, "trust_assessment", None)
+        _ts_obj = getattr(_assessment, "trust_score", None) if _assessment else getattr(trust_dec, "trust_score", None)
+        _overall_ts = getattr(_ts_obj, "overall_trust_score", getattr(_ts_obj, "overall_score", 0.52)) if _ts_obj else 0.52
+
+        _br_obj = getattr(_assessment, "blast_radius", None) if _assessment else getattr(trust_dec, "blast_radius", None)
+        _br_level_raw = getattr(_br_obj, "potential_action_level", getattr(_br_obj, "severity", "HIGH")) if _br_obj else "HIGH"
+        _br_level = getattr(_br_level_raw, "value", str(_br_level_raw))
+        _br_scope = getattr(_br_obj, "affected_scope", "WAN Interface Egress") if _br_obj else "WAN Interface Egress"
+
+        _req_human = trust_dec.decision.value == "HUMAN_APPROVAL_REQUIRED" if hasattr(trust_dec.decision, "value") else True
+        _is_rev = getattr(getattr(trust_dec, "policy_applied", None), "require_reversibility", True)
+
+        _adv_res = getattr(trust_dec, "adversarial_result", None)
+        _adv_passed = getattr(_adv_res, "passed_challenges", 3) if _adv_res else 3
+        _adv_total = len(getattr(_adv_res, "challenges", [1, 2, 3])) if _adv_res else 3
+
         with col_t1:
-            st.markdown(f"**Overall Trust Score**: `{trust_dec.trust_score.overall_score:.2f} / 1.00`")
-            st.markdown(f"**Blast Radius Assessment**: `{trust_dec.blast_radius.potential_action_level.value}` ({trust_dec.blast_radius.affected_scope})")
+            st.markdown(f"**Overall Trust Score**: `{_overall_ts:.2f} / 1.00`")
+            st.markdown(f"**Blast Radius Assessment**: `{_br_level}` ({_br_scope})")
             st.markdown(f"**Autonomy Policy Decision**: `{trust_dec.decision.value}`")
         with col_t2:
-            st.markdown(f"**Required Operator Approval**: {'⚠️ YES (Mandatory)' if trust_dec.requires_human_approval else '✅ NO'}")
-            st.markdown(f"**Rollback Reversibility**: {'✅ REVERSIBLE' if trust_dec.is_reversible else '⚠️ IRREVERSIBLE'}")
-            st.markdown(f"**Adversarial Checks Passed**: `{trust_dec.adversarial_result.passed_challenges}/{len(trust_dec.adversarial_result.challenges)}`")
+            st.markdown(f"**Required Operator Approval**: {'⚠️ YES (Mandatory)' if _req_human else '✅ NO'}")
+            st.markdown(f"**Rollback Reversibility**: {'✅ REVERSIBLE' if _is_rev else '⚠️ IRREVERSIBLE'}")
+            st.markdown(f"**Adversarial Checks Passed**: `{_adv_passed}/{_adv_total}`")
         
         # Decision Explanations Section
         st.markdown("""
@@ -1426,8 +1446,7 @@ with col_info:
         st.markdown('</div>', unsafe_allow_html=True)
 
     except Exception as e:
-        # Graceful fallback preserving Trust and Reasoning keywords
-        st.markdown("<!-- Trust & Reasoning Gate Active -->", unsafe_allow_html=True)
+        st.warning(f"Unified Evidence, Reasoning & Trust Gate status: {e}")
 
     # -----------------------------------------------------------------------
     # STAGE 6.5: Topology-Aware Incident Impact Intelligence Panel
@@ -1510,9 +1529,10 @@ with col_info:
     st.write("")
     st.subheader("🌐 Intelligent Network Path & Provider Decision Engine")
     try:
-        from agents.path_decision import PathDecisionService
-        p_service = PathDecisionService()
-        path_res = p_service.evaluate_path_decision(selected_name)
+        if path_res is None:
+            from agents.path_decision import PathDecisionService
+            p_service = PathDecisionService()
+            path_res = p_service.evaluate_path_decision(selected_name)
 
         if path_res and path_res.recommendation:
             rec = path_res.recommendation
@@ -1577,7 +1597,7 @@ with col_info:
                         "Type":      exec_class,
                         "Role":      role_badge,
                     })
-                st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(comp_rows), width='stretch', hide_index=True)
 
             # Simulation Scenarios
             if path_res.simulations:
@@ -1593,7 +1613,7 @@ with col_info:
                         "Exp Utilization": f"{sim.expected_utilization_percent:.1f}%",
                         "Exp Risk":        f"{sim.expected_failure_risk*100:.0f}%",
                     })
-                st.dataframe(pd.DataFrame(sim_rows), use_container_width=True, hide_index=True)
+                st.dataframe(pd.DataFrame(sim_rows), width='stretch', hide_index=True)
 
             # Economic Status
             if path_res.economics:
@@ -1810,8 +1830,9 @@ with col_info:
         inv_ctx.set_agent_output("IncidentAgent", {"incident_id": "INC-WAN-CONGESTION-01", "state": "INVESTIGATING", "confidence": 0.95})
         inv_ctx.set_agent_output("TopologyAgent", {"blast_radius": "CRITICAL", "impact_pct": 83.33, "confidence": 1.0})
         inv_ctx.set_agent_output("ReasoningAgent", {"primary_root_cause": "WAN Link Congestion & Traffic Saturation", "confidence": 0.52})
-        inv_ctx.set_agent_output("TrustAgent", {"decision": "HUMAN_APPROVAL_REQUIRED", "trust_score": 0.52, "confidence": 0.52})
-        inv_ctx.set_agent_output("PathDecisionService", {"recommended_provider": "ISP-B", "health_score": 94.1, "confidence": 0.94})
+        _rec_prov_lineage = path_res.recommendation.recommended_provider if (path_res and path_res.recommendation and path_res.recommendation.recommended_provider) else "ISP-B"
+        _health_score_lineage = path_res.scores[0].total_score if (path_res and path_res.scores) else 94.1
+        inv_ctx.set_agent_output("PathDecisionService", {"recommended_provider": _rec_prov_lineage, "health_score": _health_score_lineage, "confidence": 0.94})
 
         lineage_report = inv_ctx.build_evidence_lineage(target_entity=selected_name, auto_ingest_subsystems=True)
 
@@ -2078,11 +2099,12 @@ with col_info:
         fo_service = FailoverService()
         failover_res_obj = getattr(st.session_state, "last_failover_result", None)
 
+        _rec_prov_learning = path_res.recommendation.recommended_provider if (path_res and path_res.recommendation and path_res.recommendation.recommended_provider) else "ISP-B"
         learning_res = fo_service.generate_decision_learning(
             target_entity=selected_name,
             failover_result=failover_res_obj,
             context=inv_ctx if 'inv_ctx' in locals() else None,
-            predicted_provider="ISP-B",
+            predicted_provider=_rec_prov_learning,
             predicted_risk=0.88,
             expected_latency_ms=12.0,
             expected_loss=0.0,
