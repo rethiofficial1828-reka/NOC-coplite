@@ -504,12 +504,14 @@ summary_state = cmd_center_service.build_summary_state()
 with st.sidebar:
     st.header("🏛️ Console Navigation")
     view_options = ["🏛️ Command Center", "🔬 Single-Incident Workbench"]
-    curr_view_idx = 0 if st.session_state.ui_view_mode == "COMMAND_CENTER" else 1
-    selected_nav = st.radio("Active View", view_options, index=curr_view_idx, key="sidebar_nav_mode_radio")
-    target_mode = "COMMAND_CENTER" if selected_nav.startswith("🏛️") else "DRILL_DOWN"
-    if target_mode != st.session_state.ui_view_mode:
-        st.session_state.ui_view_mode = target_mode
-        st.rerun()
+    if "sidebar_nav_mode_radio" not in st.session_state:
+        st.session_state.sidebar_nav_mode_radio = "🏛️ Command Center" if st.session_state.ui_view_mode == "COMMAND_CENTER" else "🔬 Single-Incident Workbench"
+
+    def _on_nav_change():
+        chosen = st.session_state.sidebar_nav_mode_radio
+        st.session_state.ui_view_mode = "COMMAND_CENTER" if chosen.startswith("🏛️") else "DRILL_DOWN"
+
+    st.radio("Active View", view_options, key="sidebar_nav_mode_radio", on_change=_on_nav_change)
 
     st.write("---")
     st.header("⚙️ Fleet & Node Controls")
@@ -745,16 +747,24 @@ if st.session_state.ui_view_mode == "COMMAND_CENTER":
                 </div>
                 """, unsafe_allow_html=True)
             with g_col2:
-                if st.button("⚡ Investigate Group", key=f"btn_grp_{grp.group_id}", width="stretch"):
-                    if grp.affected_devices:
-                        target_dev = grp.affected_devices[0]
-                        dev_match = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == target_dev or d["name"] == target_dev), target_dev)
-                        st.session_state.selected_device_name = dev_match
-                    if grp.affected_site_ids:
-                        st.session_state.selected_site_id = grp.affected_site_ids[0]
-                    st.session_state.selected_group_id = grp.group_id
-                    st.session_state.ui_view_mode = "DRILL_DOWN"
-                    st.rerun()
+                dev_t = None
+                if grp.affected_devices:
+                    t_dev = grp.affected_devices[0]
+                    dev_t = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == t_dev or d["name"] == t_dev), t_dev)
+                s_id = grp.affected_site_ids[0] if grp.affected_site_ids else None
+
+                def _make_grp_investigate_cb(d=dev_t, s=s_id, g=grp.group_id):
+                    def _cb():
+                        if d:
+                            st.session_state.selected_device_name = d
+                        if s:
+                            st.session_state.selected_site_id = s
+                        st.session_state.selected_group_id = g
+                        st.session_state.ui_view_mode = "DRILL_DOWN"
+                        st.session_state.sidebar_nav_mode_radio = "🔬 Single-Incident Workbench"
+                    return _cb
+
+                st.button("⚡ Investigate Group", key=f"btn_grp_{grp.group_id}", width="stretch", on_click=_make_grp_investigate_cb())
     else:
         st.markdown("""
         <div style="background:rgba(15,23,42,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:12px; font-size:0.82rem; color:#94a3b8; text-align:center;">
@@ -823,13 +833,17 @@ if st.session_state.ui_view_mode == "COMMAND_CENTER":
                 </div>
                 """, unsafe_allow_html=True)
             with q_col2:
-                if st.button("⚡ Investigate", key=f"btn_q_{q_item.incident_id}", width="stretch"):
-                    dev_match = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == q_item.device_id or d["name"] == q_item.device_id), q_item.device_id)
-                    st.session_state.selected_device_name = dev_match
-                    st.session_state.selected_incident_id = q_item.incident_id
-                    st.session_state.selected_site_id = q_item.site_id
-                    st.session_state.ui_view_mode = "DRILL_DOWN"
-                    st.rerun()
+                q_dev = next((d["name"] for d in DEVICE_REGISTRY if d["id"] == q_item.device_id or d["name"] == q_item.device_id), q_item.device_id)
+                def _make_q_investigate_cb(d=q_dev, inc=q_item.incident_id, s=q_item.site_id):
+                    def _cb():
+                        st.session_state.selected_device_name = d
+                        st.session_state.selected_incident_id = inc
+                        st.session_state.selected_site_id = s
+                        st.session_state.ui_view_mode = "DRILL_DOWN"
+                        st.session_state.sidebar_nav_mode_radio = "🔬 Single-Incident Workbench"
+                    return _cb
+
+                st.button("⚡ Investigate", key=f"btn_q_{q_item.incident_id}", width="stretch", on_click=_make_q_investigate_cb())
 
         if len(displayed_queue) > MAX_QUEUE_DISPLAY:
             st.caption(f"Showing top {MAX_QUEUE_DISPLAY} of {len(displayed_queue)} prioritized queue items.")
@@ -851,6 +865,10 @@ else:
     site_label = site_for_dev.site_name if site_for_dev else "Campus"
     inc_label = getattr(st.session_state, "selected_incident_id", "Live Session")
 
+    def _return_to_cmd_center():
+        st.session_state.ui_view_mode = "COMMAND_CENTER"
+        st.session_state.sidebar_nav_mode_radio = "🏛️ Command Center"
+
     b_col1, b_col2 = st.columns([5, 1])
     with b_col1:
         st.markdown(f"""
@@ -859,9 +877,7 @@ else:
         </div>
         """, unsafe_allow_html=True)
     with b_col2:
-        if st.button("← Return to Command Center", width="stretch", key="btn_return_cmd_center"):
-            st.session_state.ui_view_mode = "COMMAND_CENTER"
-            st.rerun()
+        st.button("← Return to Command Center", width="stretch", key="btn_return_cmd_center", on_click=_return_to_cmd_center)
 
     # ---------------------------------------------------------------------------
     # STAGE 1: Header & Operating State
