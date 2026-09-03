@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Engine Health",
+    "method": "GET",
+    "status": 200,
+    "latency_ms": 2104.7,
+    "validity": "VALID",
+    "details": "{\"status\":\"ok\"}"
+  },
+  {
+    "name": "Engine Device Inventory",
+    "method": "GET",
+    "status": 200,
+    "latency_ms": 2073.84,
+    "validity": "VALID",
+    "details": "{\"devices\":[{\"id\":\"core-01\",\"name\":\"Campus Co"
+  },
+  {
+    "name": "Engine Predict (Branch3)",
+    "method": "GET",
+    "status": 200,
+    "latency_ms": 2055.86,
+    "validity": "VALID",
+    "details": "{\"interface\":\"Branch3-Uplink\",\"risk_score\":0."
+  },
+  {
+    "name": "Copilot Health",
+    "method": "GET",
+    "status": 200,
+    "latency_ms": 2047.43,
+    "validity": "VALID",
+    "details": "{\"status\":\"ok\"}"
+  },
+  {
+    "name": "Copilot Inference",
+    "method": "POST",
+    "status": 200,
+    "latency_ms": 6101.8,
+    "validity": "VALID",
+    "details": "{\"explanation\":{\"predicted_issue\":\"Hub-link c"
+  },
+  {
+    "name": "Streamlit Health",
+    "method": "GET",
+    "status": 200,
+    "latency_ms": 2056.41,
+    "validity": "VALID",
+    "details": "ok"
+  }
+]

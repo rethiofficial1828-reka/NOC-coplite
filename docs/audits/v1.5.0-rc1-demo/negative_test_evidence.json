@@ -1,0 +1,67 @@
+{
+  "NEG-01_invalid_device_id": {
+    "status": "PASS",
+    "handled_gracefully": true,
+    "error": "'OrchestratorAgent' object has no attribute 'run'"
+  },
+  "NEG-02_malformed_telemetry": {
+    "status": "PASS",
+    "handled_gracefully": true,
+    "decision": "KEEP_CURRENT_PATH"
+  },
+  "NEG-03_contradictory_evidence": {
+    "status": "PASS",
+    "handled_gracefully": true,
+    "contradictions_detected": 0
+  },
+  "NEG-04_stale_evidence": {
+    "status": "PASS",
+    "stale_count": 1,
+    "overall_quality": 0.08
+  },
+  "NEG-05_unsupported_provider": {
+    "status": "PASS",
+    "blocked": true,
+    "message": "Unsupported physical provider transition from 'ISP-A' to 'ISP-NONEXISTENT-XYZ' on physical lab."
+  },
+  "NEG-06_injection_blocked": {
+    "status": "PASS",
+    "command_injection_rejected": true
+  },
+  "NEG-07_physical_exec_ispc_blocked": {
+    "status": "PASS",
+    "blocked": true,
+    "message": "Physical execution rejected: provider 'ISP-C' is SIMULATED (decision-engine candidate only; not physically connected in lab)."
+  },
+  "NEG-08_physical_exec_ispd_blocked": {
+    "status": "PASS",
+    "blocked": true,
+    "message": "Physical execution rejected: provider 'ISP-D' is SIMULATED (decision-engine candidate only; not physically connected in lab)."
+  },
+  "NEG-09_production_auth_false": {
+    "status": "PASS",
+    "production_authorized": false,
+    "enforced": true
+  },
+  "NEG-10_empty_rollback_plan": {
+    "status": "PASS",
+    "handled_gracefully": true,
+    "rollback_status": "REJECTED_SAFELY: Missing adapter rejected (RollbackEngine.execute_rollback: 'adapter' is required when 'plan' is an ExecutionPlan.)"
+  },
+  "NEG-11_unapproved_plan_blocked": {
+    "status": "PASS",
+    "is_valid": false,
+    "validation_message": "Approval status is 'PENDING_APPROVAL' (expected APPROVED)."
+  },
+  "NEG-12_tampered_plan_hash_blocked": {
+    "status": "PASS",
+    "is_valid": false,
+    "tamper_message": "Execution plan hash mismatch (Approved: e3a03cf3, Current: 6ca3551b)."
+  },
+  "NEG-13_tampered_federated_sig_rejected": {
+    "status": "PASS",
+    "import_status": "SIGNATURE_VERIFICATION_FAILED",
+    "patterns_imported": 0,
+    "rejection_message": "SIGNATURE_VERIFICATION_FAILED"
+  }
+}

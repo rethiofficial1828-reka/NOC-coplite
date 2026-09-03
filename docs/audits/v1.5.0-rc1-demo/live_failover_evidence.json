@@ -1,0 +1,274 @@
+{
+  "timestamp": "2026-09-03T09:02:55.124224+00:00",
+  "baseline_state": {
+    "active_provider": "ISP-A",
+    "active_next_hop": "10.10.1.1",
+    "active_interface": "eth1",
+    "distance": 10,
+    "static_routes_count": 2
+  },
+  "failure_injected": {
+    "entity": "ISP-A on Branch3-Uplink",
+    "telemetry": {
+      "latency": 210.0,
+      "loss": 9.5,
+      "jitter": 48.0,
+      "utilization": 97.0
+    },
+    "risk_score": 0.89
+  },
+  "pipeline_execution": {
+    "failover_id": "bb771612-0f47-4e3a-bc93-72ddc5990f53",
+    "decision_id": "e1a49f18-7399-4fee-b06a-213d92b3983d",
+    "source_provider": "ISP-A",
+    "target_provider": "ISP-B",
+    "final_status": "COMPLETED",
+    "audit_reference": "AUDIT-D6E0480A",
+    "prechecks_count": 16,
+    "all_prechecks_passed": true,
+    "approval_status": "APPROVED",
+    "approval_hash": "0079cd22735027aefd96053a8f4996610735cf24a637d990fd1ef388162e3e7a"
+  },
+  "digital_twin": {
+    "simulation_id": "a011e579-7f7f-4d40-a2c4-41276db4bbaf",
+    "scenario": "FAILOVER",
+    "target_entity": "ISP-A->ISP-B",
+    "affected_node_ids": [
+      "branch3-uplink"
+    ],
+    "affected_link_ids": [
+      "link-branch3-uplink-isp-b"
+    ],
+    "affected_services": [
+      "egress_routing",
+      "corporate_wan"
+    ],
+    "isolated_nodes": [],
+    "rerouted_paths": {
+      "branch3-uplink": [
+        "branch3-uplink",
+        "ISP-B-POP",
+        "Enterprise Gateway"
+      ]
+    },
+    "predicted_reachability": {
+      "hub": true,
+      "branch1": true,
+      "core-01": true,
+      "fw-01": true,
+      "rtr-01": true,
+      "branch3-uplink": true
+    },
+    "impact_severity": "LOW",
+    "blast_radius_pct": 16.7,
+    "summary": "Simulated failover: 'ISP-A' -> 'ISP-B' on 'branch3-uplink'. Target next-hop: 10.10.2.1, Capacity: 500 Mbps, Simulated: False.",
+    "provenance": "DIGITAL_TWIN_SIMULATED",
+    "timestamp": "2026-09-03T09:02:51.490599Z"
+  },
+  "gnn_blast_radius": {
+    "result_id": "4af0f3ce-f918-4c6e-be80-ed399466edfa",
+    "request_id": "3931b273-ac70-4a9c-aa8c-d03a83aa8c67",
+    "target_entity": "ISP-B",
+    "predicted_blast_radius_pct": 0.0,
+    "high_risk_nodes": [],
+    "propagation_probabilities": {
+      "hub": 0.13,
+      "branch1": 0.056,
+      "core-01": 0.024,
+      "fw-01": 0.056,
+      "rtr-01": 0.13,
+      "branch3-uplink": 0.3
+    },
+    "impacted_service_count": 0,
+    "confidence_score": 0.92,
+    "provenance": "DETERMINISTIC_PROPAGATION_FALLBACK",
+    "advisory_notes": [
+      "Origin entity 'ISP-B' mapped to origin node 'branch3-uplink'.",
+      "Blast radius is LOW and localized. Safe for controlled failover."
+    ],
+    "timestamp": "2026-09-03T09:02:51.495902Z"
+  },
+  "z3_verification": {
+    "result_id": "583d42ae-0aa4-4312-9b97-9e638c62db72",
+    "request_id": "ce15cecd-7849-43e8-9240-77feb755ca0e",
+    "status": "SAT",
+    "is_safe": true,
+    "solver_type": "z3_native",
+    "passed_invariants": [
+      "PROVIDER_EXISTS",
+      "PROVIDER_CONFIGURED",
+      "INTERFACE_EXISTS",
+      "NEXT_HOP_VALID",
+      "ROUTE_VALID",
+      "LOOP_FREEDOM",
+      "TARGET_AUTHORIZED",
+      "COOLDOWN_SATISFIED",
+      "ANTI_FLAP_STABILITY",
+      "BLAST_RADIUS_BOUNDED",
+      "PRODUCTION_HARD_GATE",
+      "SIMULATED_PROVIDER_BOUNDARY"
+    ],
+    "violated_invariants": [],
+    "invariant_results": [
+      {
+        "invariant_id": "INV-01",
+        "invariant_name": "PROVIDER_EXISTS",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Target provider 'ISP-B' is registered.",
+        "details": {
+          "target_provider": "ISP-B",
+          "registered_providers": [
+            "ISP-A",
+            "ISP-B",
+            "ISP-C",
+            "ISP-D"
+          ]
+        }
+      },
+      {
+        "invariant_id": "INV-02",
+        "invariant_name": "PROVIDER_CONFIGURED",
+        "passed": true,
+        "severity": "HIGH",
+        "message": "Provider 'ISP-B' configured with 500.0 Mbps.",
+        "details": {
+          "provider_id": "ISP-B",
+          "provider_name": "ISP-B",
+          "wan_interface": "Branch3-Backup",
+          "source_device": "branch3-uplink",
+          "next_hop": "10.10.2.1",
+          "priority": 2,
+          "bandwidth_mbps": 500.0,
+          "is_primary": false,
+          "is_simulated": false,
+          "metadata": {
+            "provider_type": "Secondary Broadband",
+            "sla_latency_max_ms": 60.0,
+            "sla_loss_max_percent": 2.0
+          }
+        }
+      },
+      {
+        "invariant_id": "INV-03",
+        "invariant_name": "INTERFACE_EXISTS",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Interface 'Branch3-Uplink' exists in interface registry.",
+        "details": {
+          "wan_interface": "Branch3-Uplink"
+        }
+      },
+      {
+        "invariant_id": "INV-04",
+        "invariant_name": "NEXT_HOP_VALID",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Next-hop IP '10.10.2.1' is a valid routable unicast IPv4 address.",
+        "details": {
+          "next_hop": "10.10.2.1"
+        }
+      },
+      {
+        "invariant_id": "INV-05",
+        "invariant_name": "ROUTE_VALID",
+        "passed": true,
+        "severity": "HIGH",
+        "message": "All route table prefixes and administrative metrics are valid.",
+        "details": {}
+      },
+      {
+        "invariant_id": "INV-06",
+        "invariant_name": "LOOP_FREEDOM",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Forwarding path is loop-free and acyclic.",
+        "details": {}
+      },
+      {
+        "invariant_id": "INV-07",
+        "invariant_name": "TARGET_AUTHORIZED",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Target device 'branch3-uplink' is in authorization allowlist.",
+        "details": {
+          "target_device": "branch3-uplink"
+        }
+      },
+      {
+        "invariant_id": "INV-08",
+        "invariant_name": "COOLDOWN_SATISFIED",
+        "passed": true,
+        "severity": "MEDIUM",
+        "message": "Cooldown satisfied (9999s elapsed >= 60s threshold).",
+        "details": {
+          "elapsed_sec": 9999.0,
+          "min_required_sec": 60.0
+        }
+      },
+      {
+        "invariant_id": "INV-09",
+        "invariant_name": "ANTI_FLAP_STABILITY",
+        "passed": true,
+        "severity": "HIGH",
+        "message": "Anti-flap check passed (0 transitions in last hour <= 4 max).",
+        "details": {
+          "transitions_last_hour": 0,
+          "max_allowed": 4
+        }
+      },
+      {
+        "invariant_id": "INV-10",
+        "invariant_name": "BLAST_RADIUS_BOUNDED",
+        "passed": true,
+        "severity": "HIGH",
+        "message": "Predicted blast radius (0.0%) within allowable safety bound (<= 40.0%).",
+        "details": {
+          "predicted_blast_radius_pct": 0.0,
+          "max_allowed_pct": 40.0
+        }
+      },
+      {
+        "invariant_id": "INV-11",
+        "invariant_name": "PRODUCTION_HARD_GATE",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "PRODUCTION_AUTHORIZED hard-gate enforced (PRODUCTION_AUTHORIZED=False).",
+        "details": {
+          "PRODUCTION_AUTHORIZED": false,
+          "execution_mode": "LAB_AUTHORIZED"
+        }
+      },
+      {
+        "invariant_id": "INV-12",
+        "invariant_name": "SIMULATED_PROVIDER_BOUNDARY",
+        "passed": true,
+        "severity": "CRITICAL",
+        "message": "Provider boundary verified for 'ISP-B' (Simulated=False, Mode=LAB_AUTHORIZED).",
+        "details": {
+          "target_provider": "ISP-B",
+          "is_simulated": false,
+          "execution_mode": "LAB_AUTHORIZED"
+        }
+      }
+    ],
+    "counterexample": null,
+    "proof_summary": "SAT: Formally verified all 12 invariants via z3_native in 3.1ms. Candidate plan is provably safe.",
+    "evaluation_time_ms": 3.1,
+    "timestamp": "2026-09-03T09:02:51.915844Z"
+  },
+  "post_failover_state": {
+    "active_provider": "ISP-B",
+    "active_next_hop": "10.10.2.1",
+    "active_interface": "eth2",
+    "distance": 20,
+    "success": true
+  },
+  "failback_restored_state": {
+    "active_provider": "ISP-A",
+    "active_next_hop": "10.10.1.1",
+    "active_interface": "eth1",
+    "distance": 10,
+    "success": true
+  }
+}

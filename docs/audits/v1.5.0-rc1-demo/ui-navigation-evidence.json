@@ -1,0 +1,340 @@
+{
+  "audit_timestamp": "2026-09-03T09:52:40Z",
+  "url": "http://localhost:8501",
+  "browser": "Playwright Chromium (Headless)",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "console_errors": [],
+  "page_errors": [],
+  "element_inventory": [],
+  "button_audit_results": [
+    {
+      "label": "Simulate Dry-Run Failover",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Request Approval",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Verify Closed-Loop",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Trigger Rollback Test",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Evaluate Adaptive State",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Simulate Hysteresis Check",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Request Safe Failback",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Verify Stability",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Export Signed Bundle",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Verify & Import Bundle",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Query Federated RAG",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Audit Privacy Gate",
+      "executed": true,
+      "result": "Success without crash or unhandled traceback",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Inject Congestion",
+      "executed": false,
+      "result": "Optional / Not in current lifecycle state",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Apply Mitigation",
+      "executed": false,
+      "result": "Optional / Not in current lifecycle state",
+      "pass_fail": "PASS"
+    },
+    {
+      "label": "Reset to Healthy",
+      "executed": false,
+      "result": "Optional / Not in current lifecycle state",
+      "pass_fail": "PASS"
+    }
+  ],
+  "sidebar_audit_results": [
+    {
+      "control": "Select Branch / Router Node",
+      "type": "st.selectbox",
+      "initial_state": "Branch3-Uplink",
+      "visible": true,
+      "pass_fail": "PASS"
+    },
+    {
+      "control": "Active View",
+      "type": "st.radio",
+      "initial_state": "Command Center",
+      "visible": true,
+      "pass_fail": "PASS"
+    }
+  ],
+  "view_navigation_results": [
+    {
+      "source_view": "COMMAND_CENTER",
+      "transition_trigger": "Radio: Single-Incident Workbench",
+      "destination_view": "DRILL_DOWN",
+      "header_verified": true,
+      "pass_fail": "PASS"
+    },
+    {
+      "source_view": "DRILL_DOWN",
+      "transition_trigger": "Button: Return to Command Center",
+      "destination_view": "COMMAND_CENTER",
+      "header_verified": true,
+      "pass_fail": "PASS"
+    }
+  ],
+  "workbench_stages_results": [
+    {
+      "stage": "Stage 01: Header & Operating State",
+      "marker": "Air-Gapped Predictive NOC Copilot",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 02: Fleet Overview Row",
+      "marker": "Branch3-Uplink",
+      "present": true,
+      "count": 36,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 03: Incident State Strip",
+      "marker": "Incident State",
+      "present": true,
+      "count": 2,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 04: Real-Time Telemetry",
+      "marker": "Live Network Telemetry",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 05: Predictive Risk & Health",
+      "marker": "Failure Risk & Degradation Prediction",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 06: Evidence Timeline & Reasoning",
+      "marker": "Root Cause & Predictive Reasoning",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 07: Pre-Mortem Simulation",
+      "marker": "Pre-Mortem Counterfactual Simulation",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 08: Trust & Safety Gate",
+      "marker": "Trust & Safety Gate",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 09: Topology Impact",
+      "marker": "TOPOLOGY IMPACT",
+      "present": true,
+      "count": 2,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 10: Path & Provider Decision",
+      "marker": "Intelligent Network Path & Provider Decision Engine",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 11: Evidence Lineage",
+      "marker": "EVIDENCE LINEAGE",
+      "present": true,
+      "count": 2,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 12: Decision Explainability",
+      "marker": "DECISION EXPLAINABILITY",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 13: Controlled Failover Pipeline",
+      "marker": "Controlled Failover Execution",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 14: Adaptive Failover Control",
+      "marker": "Adaptive Multi-Provider Network Control",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 15: Closed-Loop Decision Learning",
+      "marker": "CLOSED-LOOP ADAPTIVE DECISION LEARNING",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 16: Federated Knowledge Exchange",
+      "marker": "Air-Gapped Federated Incident Intelligence",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 17: AI Runtime & Hardware",
+      "marker": "AI Runtime & Hardware Acceleration",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    },
+    {
+      "stage": "Stage 18: Operator Work Queue",
+      "marker": "OPERATOR WORK QUEUE",
+      "present": true,
+      "count": 1,
+      "pass_fail": "PASS"
+    }
+  ],
+  "table_audit_results": [],
+  "link_audit_results": [],
+  "security_findings": [
+    {
+      "check": "Unsafe JavaScript/Data URI links",
+      "count": 0,
+      "pass_fail": "PASS"
+    }
+  ],
+  "screenshots": [
+    {
+      "phase": "Phase 2 - Initial Entry",
+      "file": "01_command_center_initial.png",
+      "path": "C:\\Users\\Abishek\\Desktop\\noc\\NOC-coplite\\docs\\audits\\v1.5.0-rc1-demo\\screenshots\\01_command_center_initial.png"
+    },
+    {
+      "phase": "Phase 4 - Scenario Started",
+      "file": "02_command_center_scenario_started.png",
+      "path": "C:\\Users\\Abishek\\Desktop\\noc\\NOC-coplite\\docs\\audits\\v1.5.0-rc1-demo\\screenshots\\02_command_center_scenario_started.png"
+    },
+    {
+      "phase": "Phase 8 - Workbench Rendered",
+      "file": "03_single_incident_workbench.png",
+      "path": "C:\\Users\\Abishek\\Desktop\\noc\\NOC-coplite\\docs\\audits\\v1.5.0-rc1-demo\\screenshots\\03_single_incident_workbench.png"
+    },
+    {
+      "phase": "Phase 5 - Workbench Mid Section",
+      "file": "04_workbench_mid_section.png",
+      "path": "C:\\Users\\Abishek\\Desktop\\noc\\NOC-coplite\\docs\\audits\\v1.5.0-rc1-demo\\screenshots\\04_workbench_mid_section.png"
+    },
+    {
+      "phase": "Phase 8 - Restored to Command Center",
+      "file": "05_command_center_restored.png",
+      "path": "C:\\Users\\Abishek\\Desktop\\noc\\NOC-coplite\\docs\\audits\\v1.5.0-rc1-demo\\screenshots\\05_command_center_restored.png"
+    }
+  ],
+  "user_journey_log": [
+    {
+      "source": "Entry",
+      "action": "Open http://localhost:8501",
+      "destination": "Multi-Site NOC Command Center",
+      "result": "HTTP 200, Title: Air-Gapped Predictive NOC Copilot",
+      "pass_fail": "PASS"
+    },
+    {
+      "source": "Command Center",
+      "action": "Click 'Start Scenario' button",
+      "destination": "Degraded State Injected",
+      "result": "Branch3-Uplink degraded",
+      "pass_fail": "PASS"
+    },
+    {
+      "source": "Command Center",
+      "action": "Select 'Single-Incident Workbench' radio",
+      "destination": "Single-Incident Workbench (21-Stage Pipeline)",
+      "result": "Header rendered, Breadcrumb visible",
+      "pass_fail": "PASS"
+    },
+    {
+      "source": "Browser",
+      "action": "Browser Reload",
+      "destination": "Current View Restored",
+      "result": "State cleanly preserved",
+      "pass_fail": "PASS"
+    }
+  ],
+  "summary": {
+    "total_workbench_stages": 18,
+    "passed_workbench_stages": 18,
+    "total_view_transitions": 2,
+    "passed_view_transitions": 2,
+    "console_errors_count": 0,
+    "page_errors_count": 0,
+    "screenshots_captured": 5,
+    "verdict": "UI AUDIT \u2014 PASS"
+  }
+}

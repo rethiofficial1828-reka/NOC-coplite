@@ -1,0 +1,170 @@
+{
+  "audit_timestamp": "2026-09-03T14:32:25Z",
+  "total_stages_tested": 21,
+  "render_latency_ms": 448.44,
+  "service_call_counts": {
+    "PathDecisionService.evaluate_path_decision": 1,
+    "DigitalTwinService.simulate_failover": 1,
+    "GNNService.evaluate_blast_radius": 1,
+    "Z3FormalVerifier.verify_plan": 1,
+    "FRRControlPlane.check_readiness": 1,
+    "TopologyService.get_incident_topology_impact": 1
+  },
+  "stages": {
+    "Stage 01: Sidebar & Sites": {
+      "status": "PASS",
+      "sites_count": 4,
+      "critical_sites": 0,
+      "devices_monitored": 4
+    },
+    "Stage 02: Device Selection": {
+      "status": "PASS",
+      "selected_device": "Branch3-Uplink",
+      "valid_device": true
+    },
+    "Stage 03: Incident State": {
+      "status": "PASS",
+      "incident_status": "INVESTIGATING",
+      "device": "Branch3-Uplink",
+      "primary_provider": "ISP-A"
+    },
+    "Stage 04: Telemetry": {
+      "status": "PASS",
+      "latency_ms": 195.0,
+      "loss_pct": 8.5,
+      "utilization_pct": 96.0
+    },
+    "Stage 05: Health & Pre-Mortem": {
+      "status": "PASS",
+      "health_score": 0.0,
+      "signature": "WAN_CONGESTION",
+      "historical_matches": 1,
+      "confidence_adjustment": 0.11
+    },
+    "Stage 06: Evidence & Reasoning": {
+      "status": "PASS",
+      "hypotheses_count": 5,
+      "primary_root_cause": "WAN Link Congestion & Traffic Saturation",
+      "confidence": 0.57
+    },
+    "Stage 07: Trust & Safety Gate": {
+      "status": "PASS",
+      "decision": "HUMAN_APPROVAL_REQUIRED",
+      "trust_score": 0.55,
+      "blast_radius": "HIGH",
+      "adversarial_checks_passed": "3/3"
+    },
+    "Stage 08: Topology Impact": {
+      "status": "PASS",
+      "affected_nodes": 5,
+      "blast_radius_pct": 83.33
+    },
+    "Stage 09: Provider Decision": {
+      "status": "PASS",
+      "recommended_provider": "ISP-B",
+      "decision_status": "RECOMMEND_ALTERNATIVE",
+      "trust_policy_status": "HUMAN_APPROVAL_REQUIRED",
+      "execution_status": "NOT PERFORMED"
+    },
+    "Stage 10: Provider Comparison (4 Providers)": {
+      "status": "PASS",
+      "providers_evaluated": 4,
+      "scores": [
+        {
+          "provider": "ISP-B",
+          "score": 94.1,
+          "rank": 1,
+          "type": "PHYSICAL"
+        },
+        {
+          "provider": "ISP-C",
+          "score": 92.8,
+          "rank": 2,
+          "type": "SIMULATED"
+        },
+        {
+          "provider": "ISP-D",
+          "score": 85.0,
+          "rank": 3,
+          "type": "SIMULATED"
+        },
+        {
+          "provider": "ISP-A",
+          "score": 14.2,
+          "rank": 4,
+          "type": "PHYSICAL"
+        }
+      ]
+    },
+    "Stage 11: Stage 7b Intelligence Details": {
+      "status": "PASS",
+      "has_twin": true,
+      "has_gnn": true,
+      "has_z3": true
+    },
+    "Stage 12: Digital Twin": {
+      "status": "PASS",
+      "scenario": "FAILOVER",
+      "blast_radius_pct": 16.7,
+      "path_reachability": "6/6"
+    },
+    "Stage 13: GNN Advisory": {
+      "status": "PASS",
+      "provenance": "DETERMINISTIC_PROPAGATION_FALLBACK",
+      "gnn_blast_pct": 0.0,
+      "confidence": 0.92
+    },
+    "Stage 14: Z3 Verification": {
+      "status": "PASS",
+      "z3_status": "SAT",
+      "is_safe": true,
+      "solver": "z3_native",
+      "invariants_passed": 12
+    },
+    "Stage 15: FRR Readiness": {
+      "status": "PASS",
+      "frr_status": "READY",
+      "driver_type": "frr_zapi",
+      "routes_count": 4
+    },
+    "Stage 16: Evidence Lineage (Stage 7.5)": {
+      "status": "PASS",
+      "investigation_id": "d9327214-7188-47e5-a955-f6140571e735",
+      "evidence_count": 0,
+      "target_entity": "Branch3-Uplink"
+    },
+    "Stage 17: Explainability (Stage 7.6)": {
+      "status": "PASS",
+      "target_recommendation": "ISP-B",
+      "human_approval_required": true
+    },
+    "Stage 18: Controlled Failover (Stage 8)": {
+      "status": "PASS",
+      "failover_status": "COMPLETED",
+      "execution_mode": "DRY_RUN",
+      "plan_hash": "0079cd22735027aefd96"
+    },
+    "Stage 19: Adaptive Failover (Stage 9)": {
+      "status": "PASS",
+      "active_provider": "ISP-A",
+      "recommended_provider": "ISP-A",
+      "transition_status": "STABLE",
+      "failback_status": "WAIT_FOR_STABILITY",
+      "audit_ref": "ADAPTIVE-D05855EF"
+    },
+    "Stage 20: Decision Learning (Stage 9.5)": {
+      "status": "PASS",
+      "classification": "SUCCESSFUL_PREDICTION",
+      "quality": "EXCELLENT",
+      "quality_score": 0.98,
+      "predicted_provider": "ISP-B"
+    },
+    "Stage 21: Federated Intelligence (Stage 10)": {
+      "status": "PASS",
+      "bundle_file": "data/federated_bundles\\bundle_1dd92c8c.json",
+      "total_patterns_indexed": 21,
+      "sanitized_pii": true,
+      "hmac_signed": true
+    }
+  }
+}

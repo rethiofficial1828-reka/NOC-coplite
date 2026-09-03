@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-09-03T09:10:19.892840+00:00",
+  "total_files_scanned": 365,
+  "critical_violations": [],
+  "credential_findings": [],
+  "subprocess_findings": [],
+  "boundary_findings": [],
+  "production_authorized_invariant": {
+    "value": false,
+    "is_safe": true
+  },
+  "verdict": "PASS"
+}
